@@ -57,4 +57,20 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.moshi)
+    implementation(libs.okhttp.logging)
+
+    // JSON (Moshi)
+    implementation(libs.moshi)
+    implementation(libs.moshi.kotlin)
+
+    // Lifecycle + ViewModel
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.lifecycle.viewmodel.compose)
+
+    // Navigation Compose
+    implementation(libs.navigation.compose)
+
 }
