@@ -12,12 +12,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.studentcenterapp.ui.theme.StudentCenterAppTheme
-
-
+import com.example.studentcenterapp.ui.theme.StudentCenterTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studentcenterapp.ui.splash.SplashScreen
+import com.example.studentcenterapp.ui.splash.WelcomeScreen
+import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 @Composable
 fun StudentCenterApp() {
-    StudentCenterAppTheme {
+    StudentCenterTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             val navController = rememberNavController()
             StudentCenterNavHost(navController)
@@ -34,8 +36,32 @@ fun StudentCenterNavHost(
         startDestination = Screen.Splash.route
     ) {
         composable(Screen.Splash.route) {
-            PlaceholderScreen("Splash")
+            val splashViewModel: SplashViewModel = viewModel()
+
+            SplashScreen(
+                onFinished = {
+                    navController.navigate(Screen.Welcome.route) {
+                        // Geri tuşuna basınca Splash’e dönmeyelim
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                viewModel = splashViewModel
+            )
         }
+
+        composable(Screen.Welcome.route) {
+            WelcomeScreen(
+                onStudentClick = {
+                    // TODO: ileride Students/Departments vs.
+                },
+                onStaffClick = {
+                    // TODO: ileride Staff login
+                }
+            )
+        }
+
+
+        //same
         composable(Screen.Departments.route) {
             PlaceholderScreen("Departments")
         }

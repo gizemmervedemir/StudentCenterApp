@@ -2,6 +2,7 @@ package com.example.studentcenterapp.navigation
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
+    object Welcome : Screen("welcome")
     object Departments : Screen("departments")
     object Services : Screen("services")
     object Slots : Screen("slots")
