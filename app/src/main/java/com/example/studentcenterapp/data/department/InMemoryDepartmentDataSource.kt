@@ -13,6 +13,8 @@ class InMemoryDepartmentDataSource : DepartmentDataSource {
         Department(id = "dep4", name = "Kültür Sanat", description = "…"),
         Department(id = "dep5", name = "Mezunlarla İletişim", description = "…"),
         Department(id = "dep6", name = "Psikolojik Danışmanlık ve Rehberlik", description = "…"),
+        Department(id = "dep7", name = "Sağlıklı Beslenme ve Diyet", description = "…"),
+        Department(id = "dep8", name = "Spor Yönetimi", description = "…"),
     )
 
     override fun getDepartments(): Flow<List<Department>> = flowOf(departments)
