@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -14,8 +16,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.studentcenterapp.ui.theme.StudentCenterTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.ui.splash.SplashScreen
 import com.example.studentcenterapp.ui.splash.WelcomeScreen
+import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
+import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModel
 import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 @Composable
 fun StudentCenterApp() {
@@ -51,8 +56,7 @@ fun StudentCenterNavHost(
 
         composable(Screen.Welcome.route) {
             WelcomeScreen(
-                onStudentClick = {
-                    // TODO: ileride Students/Departments vs.
+                onStudentClick = { navController.navigate(Screen.Departments.route)
                 },
                 onStaffClick = {
                     // TODO: ileride Staff login
@@ -63,7 +67,31 @@ fun StudentCenterNavHost(
 
         //same
         composable(Screen.Departments.route) {
-            PlaceholderScreen("Departments")
+
+            // Hilt yok: ViewModel'i "manual" kuruyoruz
+            val vm = DepartmentListViewModel(AppDI.departmentRepository)
+
+            val state by vm.uiState.collectAsState()
+
+            DepartmentListScreen(
+                state = state,
+                currentRoute = Screen.Departments.route,
+                onTabSelected = { tab ->
+                    navController.navigate(tab.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onDepartmentClick = { departmentId ->
+                    // Şimdilik services yoksa placeholder'a gidebilirsin
+                    navController.navigate("services/$departmentId")
+                }
+            )
+        }
+
+        // services placeholder örneği:
+        composable("services/{departmentId}") { backStackEntry ->
+            val depId = backStackEntry.arguments?.getString("departmentId") ?: "-"
+            PlaceholderScreen("Services for departmentId = $depId")
         }
         composable(Screen.Services.route) {
             PlaceholderScreen("Services")
