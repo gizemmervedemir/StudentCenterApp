@@ -1,5 +1,6 @@
 package com.example.studentcenterapp.data.service
 
+import com.example.studentcenterapp.model.Service
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -16,28 +17,31 @@ interface ServiceDataSource {
  */
 class InMemoryServiceDataSource : ServiceDataSource {
 
-    // Dummy service list
-    // Your own service stub is used until the Shared Service model is introduced.
     private val services = listOf(
         Service(
             id = "s1",
             departmentId = "dep1",
-            name = "dietitian appointment request"
+            name = "Dietitian Appointment",
+            description = "Nutrition consultation and meal planning support.",
+            durationMinutes = 30
         ),
         Service(
             id = "s2",
             departmentId = "dep1",
-            name = "psychologist appointment request"
+            name = "Psychologist Appointment",
+            description = "Counseling session with university psychologist.",
+            durationMinutes = 45
         ),
         Service(
             id = "s3",
             departmentId = "dep2",
-            name = "sport appointment request"
+            name = "Sports Facility Session",
+            description = "Book a time at the sports facility.",
+            durationMinutes = 60
         )
     )
 
     override fun getServicesByDepartment(departmentId: String): Flow<List<Service>> {
-        val filtered = services.filter { it.departmentId == departmentId }
-        return flowOf(filtered)
+        return flowOf(services.filter { it.departmentId == departmentId })
     }
 }
