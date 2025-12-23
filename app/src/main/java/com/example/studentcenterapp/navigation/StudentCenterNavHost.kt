@@ -1,5 +1,9 @@
 package com.example.studentcenterapp.navigation
 
+import androidx.compose.runtime.LaunchedEffect
+import com.example.studentcenterapp.ui.service.ServiceListScreen
+import com.example.studentcenterapp.ui.service.ServiceListViewModel
+import com.example.studentcenterapp.ui.service.ServiceListViewModelFactory
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -21,6 +25,7 @@ import com.example.studentcenterapp.ui.splash.SplashScreen
 import com.example.studentcenterapp.ui.splash.WelcomeScreen
 import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModel
+import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModelFactory
 import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 @Composable
 fun StudentCenterApp() {
@@ -68,10 +73,12 @@ fun StudentCenterNavHost(
         //same
         composable(Screen.Departments.route) {
 
-            // Hilt yok: ViewModel'i "manual" kuruyoruz
-            val vm = DepartmentListViewModel(AppDI.departmentRepository)
+            val vm: DepartmentListViewModel = viewModel(
+                factory = DepartmentListViewModelFactory(AppDI.departmentRepository)
+            )
 
             val state by vm.uiState.collectAsState()
+
 
             DepartmentListScreen(
                 state = state,
@@ -88,14 +95,41 @@ fun StudentCenterNavHost(
             )
         }
 
-        // services placeholder örneği:
         composable("services/{departmentId}") { backStackEntry ->
-            val depId = backStackEntry.arguments?.getString("departmentId") ?: "-"
-            PlaceholderScreen("Services for departmentId = $depId")
+            val departmentId = backStackEntry.arguments?.getString("departmentId").orEmpty()
+
+            val vm: ServiceListViewModel = viewModel(
+                factory = ServiceListViewModelFactory(AppDI.serviceRepository)
+            )
+            val state by vm.uiState.collectAsState()
+
+            LaunchedEffect(departmentId) {
+                if (departmentId.isNotBlank()) vm.loadServices(departmentId)
+            }
+
+            ServiceListScreen(
+                state = state,
+                currentRoute = Screen.Services.route,
+                onTabSelected = { tab ->
+                    navController.navigate(tab.route) { launchSingleTop = true }
+                },
+                onServiceClick = { serviceId ->
+                    navController.navigate("slots/$serviceId")
+                }
+            )
         }
+
+
         composable(Screen.Services.route) {
             PlaceholderScreen("Services")
         }
+
+        composable("slots/{serviceId}") { backStackEntry ->
+            val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
+            PlaceholderScreen("Slots for serviceId = $serviceId")
+        }
+
+
         composable(Screen.Slots.route) {
             PlaceholderScreen("Slots")
         }
