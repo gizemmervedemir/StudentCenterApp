@@ -1,5 +1,8 @@
 package com.example.studentcenterapp.navigation
 
+import com.example.studentcenterapp.ui.staff.StaffDashboardScreen
+import com.example.studentcenterapp.ui.staff.StaffDashboardViewModel
+import com.example.studentcenterapp.ui.staff.StaffDashboardViewModelFactory
 import androidx.compose.runtime.LaunchedEffect
 import com.example.studentcenterapp.ui.service.ServiceListScreen
 import com.example.studentcenterapp.ui.service.ServiceListViewModel
@@ -64,7 +67,7 @@ fun StudentCenterNavHost(
                 onStudentClick = { navController.navigate(Screen.Departments.route)
                 },
                 onStaffClick = {
-                    // TODO: ileride Staff login
+                    navController.navigate("staffDashboard/staff1")
                 }
             )
         }
@@ -118,6 +121,32 @@ fun StudentCenterNavHost(
                 }
             )
         }
+
+        composable("staffDashboard/{staffId}") { backStackEntry ->
+            val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
+
+            val vm: StaffDashboardViewModel = viewModel(
+                factory = StaffDashboardViewModelFactory(staffId, AppDI.staffRepository)
+            )
+
+            val state by vm.uiState.collectAsState()
+            val actionLoading by vm.actionLoading.collectAsState()
+            val actionError by vm.actionError.collectAsState()
+
+            StaffDashboardScreen(
+                state = state,
+                actionLoading = actionLoading,
+                actionError = actionError,
+                currentRoute = Screen.StaffDashboard.route,
+                onTabSelected = { tab ->
+                    navController.navigate(tab.route) { launchSingleTop = true }
+                },
+                onApprove = { vm.approve(it) },
+                onReject = { vm.reject(it) }
+            )
+
+        }
+
 
 
         composable(Screen.Services.route) {
