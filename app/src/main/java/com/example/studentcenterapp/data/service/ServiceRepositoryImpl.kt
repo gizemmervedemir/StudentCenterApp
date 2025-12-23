@@ -1,5 +1,6 @@
 package com.example.studentcenterapp.data.service
 
+import com.example.studentcenterapp.model.Service
 import kotlinx.coroutines.flow.Flow
 
 class ServiceRepositoryImpl(

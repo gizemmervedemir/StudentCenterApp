@@ -3,7 +3,9 @@ package com.example.studentcenterapp.data
 import com.example.studentcenterapp.data.department.DepartmentRepository
 import com.example.studentcenterapp.data.department.DepartmentRepositoryImpl
 import com.example.studentcenterapp.data.department.InMemoryDepartmentDataSource
-
+import com.example.studentcenterapp.data.service.InMemoryServiceDataSource
+import com.example.studentcenterapp.data.service.ServiceRepository
+import com.example.studentcenterapp.data.service.ServiceRepositoryImpl
 import com.example.studentcenterapp.data.student.InMemoryStudentDataSource
 import com.example.studentcenterapp.data.student.StudentRepository
 import com.example.studentcenterapp.data.student.StudentRepositoryImpl
@@ -13,5 +15,8 @@ object AppDI {
     }
     val studentRepository: StudentRepository by lazy {
         StudentRepositoryImpl(InMemoryStudentDataSource())
+    }
+    val serviceRepository: ServiceRepository by lazy {
+        ServiceRepositoryImpl(InMemoryServiceDataSource())
     }
 }
