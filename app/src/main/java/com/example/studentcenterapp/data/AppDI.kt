@@ -1,5 +1,8 @@
 package com.example.studentcenterapp.data
 
+import com.example.studentcenterapp.data.staff.InMemoryAppointmentAdminDataSource
+import com.example.studentcenterapp.data.staff.StaffRepository
+import com.example.studentcenterapp.data.staff.StaffRepositoryImpl
 import com.example.studentcenterapp.data.department.DepartmentRepository
 import com.example.studentcenterapp.data.department.DepartmentRepositoryImpl
 import com.example.studentcenterapp.data.department.InMemoryDepartmentDataSource
@@ -19,4 +22,8 @@ object AppDI {
     val serviceRepository: ServiceRepository by lazy {
         ServiceRepositoryImpl(InMemoryServiceDataSource())
     }
+    val staffRepository: StaffRepository by lazy {
+        StaffRepositoryImpl(InMemoryAppointmentAdminDataSource())
+    }
+
 }
