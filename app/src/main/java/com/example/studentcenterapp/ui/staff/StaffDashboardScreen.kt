@@ -24,6 +24,9 @@ import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.theme.PrimaryBlue
 import com.example.studentcenterapp.ui.common.EmptyStateConfig
 import com.example.studentcenterapp.ui.common.EmptyStateScreen
+import com.example.studentcenterapp.ui.common.LoadingView
+import com.example.studentcenterapp.ui.common.ErrorView
+
 
 
 private val GrayPanel = Color(0xFFE9E9E9)     // büyük gri zemin
@@ -129,13 +132,23 @@ fun StaffDashboardScreen(
 
                         when (state) {
                             is UiState.Loading -> {
-                                Box(Modifier.fillMaxWidth().padding(vertical = 30.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
+                                LoadingView(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 30.dp)
+                                )
                             }
+
                             is UiState.Error -> {
-                                Text(state.message, modifier = Modifier.padding(12.dp))
+                                ErrorView(
+                                    message = state.message,
+                                    onRetry = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 18.dp)
+                                )
                             }
+
                             is UiState.Success -> {
                                 val all = state.data
 
@@ -183,7 +196,6 @@ fun StaffDashboardScreen(
                                     }
                                 }
                             }
-
                         }
                     }
                 }
