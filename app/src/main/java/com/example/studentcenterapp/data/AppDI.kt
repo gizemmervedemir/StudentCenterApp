@@ -12,6 +12,10 @@ import com.example.studentcenterapp.data.service.ServiceRepositoryImpl
 import com.example.studentcenterapp.data.student.InMemoryStudentDataSource
 import com.example.studentcenterapp.data.student.StudentRepository
 import com.example.studentcenterapp.data.student.StudentRepositoryImpl
+import com.example.studentcenterapp.data.auth.FakeStaffAuthRepository
+import com.example.studentcenterapp.data.auth.StaffAuthRepository
+
+
 object AppDI {
     val departmentRepository: DepartmentRepository by lazy {
         DepartmentRepositoryImpl(InMemoryDepartmentDataSource())
@@ -24,6 +28,10 @@ object AppDI {
     }
     val staffRepository: StaffRepository by lazy {
         StaffRepositoryImpl(InMemoryAppointmentAdminDataSource())
+    }
+
+    val staffAuthRepository: StaffAuthRepository by lazy {
+        FakeStaffAuthRepository()
     }
 
 }
