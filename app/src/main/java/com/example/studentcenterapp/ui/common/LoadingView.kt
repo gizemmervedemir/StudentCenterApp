@@ -1,8 +1,5 @@
 package com.example.studentcenterapp.ui.common
 
-class LoadingView {
-}package com.example.studentcenterapp.ui.common
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
