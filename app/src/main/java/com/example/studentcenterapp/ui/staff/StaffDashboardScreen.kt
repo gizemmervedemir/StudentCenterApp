@@ -22,6 +22,12 @@ import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.common.*
 import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.theme.PrimaryBlue
+import com.example.studentcenterapp.ui.common.EmptyStateConfig
+import com.example.studentcenterapp.ui.common.EmptyStateScreen
+import com.example.studentcenterapp.ui.common.LoadingView
+import com.example.studentcenterapp.ui.common.ErrorView
+
+
 
 private val GrayPanel = Color(0xFFE9E9E9)     // büyük gri zemin
 private val GrayCard  = Color(0xFFDADADA)     // list item kart gri
@@ -126,13 +132,23 @@ fun StaffDashboardScreen(
 
                         when (state) {
                             is UiState.Loading -> {
-                                Box(Modifier.fillMaxWidth().padding(vertical = 30.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
+                                LoadingView(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 30.dp)
+                                )
                             }
+
                             is UiState.Error -> {
-                                Text(state.message, modifier = Modifier.padding(12.dp))
+                                ErrorView(
+                                    message = state.message,
+                                    onRetry = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 18.dp)
+                                )
                             }
+
                             is UiState.Success -> {
                                 val all = state.data
 
@@ -143,22 +159,41 @@ fun StaffDashboardScreen(
                                     StaffTab.ALL -> all
                                 }
 
-                                LazyColumn(
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    items(filtered, key = { it.id }) { appt ->
-                                        StaffAppointmentCard(
-                                            name = appt.studentId,     // şimdilik studentId gösteriyoruz
-                                            time = appt.timeSlotId,    // şimdilik timeSlotId gösteriyoruz
-                                            status = appt.status,
-                                            actionLoading = actionLoading,
-                                            showActions = (selected == StaffTab.PENDING),
-                                            onApprove = { onApprove(appt.id) },
-                                            onReject = { onReject(appt.id) }
-                                        )
+                                if (filtered.isEmpty()) {
+                                    val (title, message) = when (selected) {
+                                        StaffTab.PENDING -> "No pending appointments" to "There are no pending requests right now."
+                                        StaffTab.ACTIVE -> "No active appointments" to "There are no active appointments right now."
+                                        StaffTab.CANCELLED -> "No cancelled appointments" to "There are no cancelled appointments right now."
+                                        StaffTab.ALL -> "No appointments" to "There are no appointments to show."
                                     }
-                                    item { Spacer(Modifier.height(8.dp)) }
+
+                                    EmptyStateScreen(
+                                        config = EmptyStateConfig(
+                                            title = title,
+                                            message = message
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 18.dp)
+                                    )
+                                } else {
+                                    LazyColumn(
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(filtered, key = { it.id }) { appt ->
+                                            StaffAppointmentCard(
+                                                name = appt.studentId,
+                                                time = appt.timeSlotId,
+                                                status = appt.status,
+                                                actionLoading = actionLoading,
+                                                showActions = (selected == StaffTab.PENDING),
+                                                onApprove = { onApprove(appt.id) },
+                                                onReject = { onReject(appt.id) }
+                                            )
+                                        }
+                                        item { Spacer(Modifier.height(8.dp)) }
+                                    }
                                 }
                             }
                         }
