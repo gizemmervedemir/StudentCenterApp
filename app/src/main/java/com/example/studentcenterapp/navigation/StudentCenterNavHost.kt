@@ -25,6 +25,12 @@ import com.example.studentcenterapp.ui.splash.WelcomeScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModel
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModelFactory
+import com.example.studentcenterapp.ui.staffauth.StaffLoginScreen
+import com.example.studentcenterapp.ui.staffauth.StaffLoginViewModel
+import com.example.studentcenterapp.ui.staffauth.StaffLoginViewModelFactory
+import com.example.studentcenterapp.ui.staffauth.StaffSignupScreen
+import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModel
+import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModelFactory
 import com.example.studentcenterapp.ui.theme.StudentCenterTheme
 import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModel
@@ -50,10 +56,8 @@ fun StudentCenterNavHost(
         startDestination = Screen.Splash.route
     ) {
 
-        // Splash
         composable(Screen.Splash.route) {
             val splashViewModel: SplashViewModel = viewModel()
-
             SplashScreen(
                 onFinished = {
                     navController.navigate(Screen.Welcome.route) {
@@ -64,24 +68,56 @@ fun StudentCenterNavHost(
             )
         }
 
-        // Welcome (Student / Staff entry)
         composable(Screen.Welcome.route) {
             WelcomeScreen(
-                onStudentClick = {
-                    navController.navigate(Screen.Departments.route)
-                },
-                onStaffClick = {
-                    navController.navigate("staffDashboard/staff1?entry=staff")
+                onStudentClick = { navController.navigate(Screen.Departments.route) },
+                onStaffClick = { navController.navigate(Screen.StaffLogin.route) }
+            )
+        }
+
+        // -------------------------
+        // Staff Auth
+        // -------------------------
+        composable(Screen.StaffLogin.route) {
+            val vm: StaffLoginViewModel = viewModel(
+                factory = StaffLoginViewModelFactory(AppDI.staffAuthRepository)
+            )
+
+            StaffLoginScreen(
+                vm = vm,
+                onSignupClick = { navController.navigate(Screen.StaffSignup.route) },
+                onSuccess = { staffId ->
+                    navController.navigate("staffDashboard/$staffId?entry=staff") {
+                        popUpTo(Screen.StaffLogin.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
 
-        // Departments
+        composable(Screen.StaffSignup.route) {
+            val vm: StaffSignupViewModel = viewModel(
+                factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository)
+            )
+
+            StaffSignupScreen(
+                vm = vm,
+                onSuccess = { staffId ->
+                    navController.navigate("staffDashboard/$staffId?entry=staff") {
+                        popUpTo(Screen.StaffLogin.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        // -------------------------
+        // Student flow (existing)
+        // -------------------------
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(
                 factory = DepartmentListViewModelFactory(AppDI.departmentRepository)
             )
-
             val state by vm.uiState.collectAsState()
 
             DepartmentListScreen(
@@ -96,7 +132,6 @@ fun StudentCenterNavHost(
             )
         }
 
-        // Services by Department
         composable("services/{departmentId}") { backStackEntry ->
             val departmentId = backStackEntry.arguments?.getString("departmentId").orEmpty()
 
@@ -112,23 +147,18 @@ fun StudentCenterNavHost(
             ServiceListScreen(
                 state = state,
                 currentRoute = Screen.Services.route,
-                onTabSelected = { tab ->
-                    navController.navigate(tab.route) { launchSingleTop = true }
-                },
-                onServiceClick = { serviceId ->
-                    navController.navigate("slots/$serviceId")
-                },
-                onRetry = {
-                    if (departmentId.isNotBlank()) vm.loadServices(departmentId)
-                }
+                onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
+                onServiceClick = { serviceId -> navController.navigate("slots/$serviceId") }
             )
         }
-        
+
+        // -------------------------
+        // Staff Dashboard (guarded)
+        // -------------------------
         composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
             val entry = backStackEntry.arguments?.getString("entry").orEmpty()
 
-            // Guard: prevent direct navigation without staff entry token
             if (staffId.isBlank() || entry != "staff") {
                 navController.navigate(Screen.Welcome.route) {
                     popUpTo(Screen.Welcome.route) { inclusive = false }
@@ -149,7 +179,7 @@ fun StudentCenterNavHost(
                 state = state,
                 actionLoading = actionLoading,
                 actionError = actionError,
-                currentRoute = null,
+                currentRoute = Screen.StaffDashboard.route,
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
@@ -158,27 +188,23 @@ fun StudentCenterNavHost(
             )
         }
 
-        // Slots (placeholder)
+        // placeholders
         composable("slots/{serviceId}") { backStackEntry ->
             val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
             PlaceholderScreen("Slots for serviceId = $serviceId")
         }
 
-        // Other placeholders
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
         composable(Screen.Confirm.route) { PlaceholderScreen("Confirm") }
         composable(Screen.Appointments.route) { PlaceholderScreen("Appointments") }
-
+        composable(Screen.StaffDashboard.route) { PlaceholderScreen("Staff Dashboard") }
     }
 }
 
 @Composable
 private fun PlaceholderScreen(name: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = "TODO: $name screen")
     }
 }
