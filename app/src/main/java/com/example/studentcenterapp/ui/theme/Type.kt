@@ -31,6 +31,11 @@ val StudentCenterTypography = Typography(
         fontSize = 20.sp  // 20–22 arası her şeyi buraya map et
     ),
 
+    titleSmall = TextStyle(
+        fontFamily = Figtree,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp
+    ),
     //ACTİON
     bodyLarge = TextStyle( // Medium 22
         fontFamily = Figtree,

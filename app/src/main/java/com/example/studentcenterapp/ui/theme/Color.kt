@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 val PrimaryBlue = Color(0xFF3DACD4)
 
-val PrimaryGreen = Color(0xFF61DBAA)
+val PrimaryGreen = Color(0xFF3ACFB0)
 
 // Error color
 val ErrorRed = Color(0xFFEE1148)
@@ -19,4 +19,5 @@ val AppointmentColor = Color(0XFFFF003F)
 val AppointmentOkColor = Color(0XFF4CAF50)
 val AdminAppointmentColor = Color(0XFFEE5B80)
 val GreyBox = Color(0XFFD9D9D9)
+val ButtonBackground = Color(0XFF1CA5D6)
 val BottomBarBackground = PrimaryBlue

@@ -24,7 +24,7 @@ fun AppTopBar(
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(R.drawable.logo),
+            painter = painterResource(R.drawable.logo_oldx),
             contentDescription = "Student Center Logo",
             modifier = Modifier.size(56.dp)   // Figma’daki 56 × 56
         )

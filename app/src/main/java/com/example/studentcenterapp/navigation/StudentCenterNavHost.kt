@@ -22,6 +22,10 @@ import com.example.studentcenterapp.ui.service.ServiceListViewModel
 import com.example.studentcenterapp.ui.service.ServiceListViewModelFactory
 import com.example.studentcenterapp.ui.splash.SplashScreen
 import com.example.studentcenterapp.ui.splash.WelcomeScreen
+import com.example.studentcenterapp.ui.student.ForgotPasswordEmailScreen
+import com.example.studentcenterapp.ui.student.SignupSuccessScreen
+import com.example.studentcenterapp.ui.student.StudentLoginScreen
+import com.example.studentcenterapp.ui.student.StudentSignupScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModel
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModelFactory
@@ -36,6 +40,10 @@ import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModel
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModelFactory
 import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
+import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
+import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
+import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
+
 
 @Composable
 fun StudentCenterApp() {
@@ -70,7 +78,7 @@ fun StudentCenterNavHost(
 
         composable(Screen.Welcome.route) {
             WelcomeScreen(
-                onStudentClick = { navController.navigate(Screen.Departments.route) },
+                onStudentClick = { navController.navigate(Screen.StudentLogin.route)},
                 onStaffClick = { navController.navigate(Screen.StaffLogin.route) }
             )
         }
@@ -95,6 +103,44 @@ fun StudentCenterNavHost(
             )
         }
 
+        composable(Screen.StudentLogin.route) {
+            val loginViewModel: StudentLoginViewModel = viewModel(
+                factory = StudentLoginViewModel.Factory
+            )
+
+            StudentLoginScreen(
+                viewModel = loginViewModel,
+                onSignupClick = {
+                    navController.navigate(Screen.StudentSignup.route)
+                },
+                onForgotPasswordClick = {
+                    // İŞTE BURADA: İlk tasarladığımız ResetPassword ekranına gönderiyoruz
+                    navController.navigate(Screen.ForgotPasswordEmail.route)
+                },
+                onLoginSuccess = {
+                    // Giriş başarılı! Şimdi ana ekrana gönderiyoruz.
+                    navController.navigate(Screen.Departments.route) {
+                        // Welcome ve Login ekranlarını geri tuşu yığınından siliyoruz
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.SignupSuccess.route) {
+            SignupSuccessScreen(
+                onLoginClick = {
+                    // Kullanıcıyı Login ekranına geri gönderir
+                    navController.navigate(Screen.StudentLogin.route) {
+                        // Bu kısım çok önemli: Geri tuşuna basınca tekrar başarı ekranı gelmesin diye
+                        // Signup ve Success ekranlarını yığından temizleriz.
+                        popUpTo(Screen.Welcome.route) {
+                            inclusive = true
+                        } // Login ekranını da yığından temizleyip yeniden oluştur
+                        launchSingleTop = true // Aynı ekranı üst üste yığma
+                    }
+                }
+            )
+        }
         composable(Screen.StaffSignup.route) {
             val vm: StaffSignupViewModel = viewModel(
                 factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository)
@@ -110,6 +156,35 @@ fun StudentCenterNavHost(
                 }
             )
         }
+
+
+        composable(Screen.ForgotPasswordEmail.route) {
+            val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+            ForgotPasswordEmailScreen(
+                viewModel = forgotPasswordViewModel,
+                onCodeSent = { navController.navigate(Screen.ForgotPasswordCode.route) },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        // NavHost dosyanın içine, StudentLogin composable'ından hemen sonra ekle:
+        composable(Screen.StudentSignup.route) {
+            // ViewModel'i factory ile bağlıyoruz (Issue'da istendiği gibi)
+            val signupViewModel: StudentSignupViewModel = viewModel(
+                factory = StudentSignupViewModel.Factory
+            )
+
+            StudentSignupScreen(
+                viewModel = signupViewModel,
+                onSignupSuccess = {
+                    // Başarılı olduğunda SignupSuccess ekranına yönlendir
+                    navController.navigate(Screen.SignupSuccess.route) {
+                        popUpTo(Screen.StudentSignup.route) { inclusive = true } // Signup ekranını yığından temizle
+                    }
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        //same
 
         // -------------------------
         // Student flow (existing)

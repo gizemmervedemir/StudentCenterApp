@@ -13,6 +13,9 @@ okhttp = "4.12.0"
 moshi = "1.15.2"
 lifecycle = "2.9.1"
 navigation = "2.9.4"
+benchmarkTraceprocessor = "1.4.1"
+material3 = "1.4.0"
+composeMaterial = "1.5.6"
 junit4 = "4.13.2"
 coroutinesTest = "1.8.1"
 turbine = "1.1.0"
@@ -45,6 +48,9 @@ lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", v
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+androidx-benchmark-traceprocessor = { group = "androidx.benchmark", name = "benchmark-traceprocessor", version.ref = "benchmarkTraceprocessor" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" }
 
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }

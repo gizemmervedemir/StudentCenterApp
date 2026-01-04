@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.studentcenterapp.R
 import com.example.studentcenterapp.ui.common.PrimaryButton
@@ -35,11 +34,9 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(230.dp)) // TOP → LOGO
 
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter = painterResource(id = R.drawable.logo_oldx),
                 contentDescription = "App logo",
-                modifier = Modifier
-                    .width(150.dp)
-                    .height(150.dp)
+                modifier = Modifier.size(160.dp)
             )
 
             Spacer(modifier = Modifier.height(142.dp)) // LOGO → HOŞ GELDİNİZ
