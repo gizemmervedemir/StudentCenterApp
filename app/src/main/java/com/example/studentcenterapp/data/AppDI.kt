@@ -1,20 +1,24 @@
 package com.example.studentcenterapp.data
 
-import com.example.studentcenterapp.data.staff.InMemoryAppointmentAdminDataSource
-import com.example.studentcenterapp.data.staff.StaffRepository
-import com.example.studentcenterapp.data.staff.StaffRepositoryImpl
+import com.example.studentcenterapp.data.auth.FakeStaffAuthRepository
+import com.example.studentcenterapp.data.auth.StaffAuthRepository
 import com.example.studentcenterapp.data.department.DepartmentRepository
 import com.example.studentcenterapp.data.department.DepartmentRepositoryImpl
 import com.example.studentcenterapp.data.department.InMemoryDepartmentDataSource
 import com.example.studentcenterapp.data.service.InMemoryServiceDataSource
 import com.example.studentcenterapp.data.service.ServiceRepository
 import com.example.studentcenterapp.data.service.ServiceRepositoryImpl
+import com.example.studentcenterapp.data.staff.InMemoryAppointmentAdminDataSource
+import com.example.studentcenterapp.data.staff.StaffRepository
+import com.example.studentcenterapp.data.staff.StaffRepositoryImpl
 import com.example.studentcenterapp.data.student.InMemoryStudentDataSource
 import com.example.studentcenterapp.data.student.StudentRepository
 import com.example.studentcenterapp.data.student.StudentRepositoryImpl
-import com.example.studentcenterapp.data.auth.FakeStaffAuthRepository
-import com.example.studentcenterapp.data.auth.StaffAuthRepository
 
+// ✅ YENİ: appointment imports
+import com.example.studentcenterapp.data.appointment.AppointmentRepository
+import com.example.studentcenterapp.data.appointment.AppointmentRepositoryImpl
+import com.example.studentcenterapp.data.appointment.InMemoryAppointmentDataSource
 
 object AppDI {
     val departmentRepository: DepartmentRepository by lazy {
@@ -34,4 +38,8 @@ object AppDI {
         FakeStaffAuthRepository()
     }
 
+    // ✅ #37 için gerekli: AppointmentRepository
+    val appointmentRepository: AppointmentRepository by lazy {
+        AppointmentRepositoryImpl(InMemoryAppointmentDataSource())
+    }
 }

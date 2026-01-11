@@ -20,15 +20,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
+import com.example.studentcenterapp.ui.confirmation.AppointmentConfirmationViewModelFactory
+import com.example.studentcenterapp.ui.screens.AppointmentConfirmationScreen
 import com.example.studentcenterapp.ui.service.ServiceListScreen
 import com.example.studentcenterapp.ui.service.ServiceListViewModel
 import com.example.studentcenterapp.ui.service.ServiceListViewModelFactory
 import com.example.studentcenterapp.ui.splash.SplashScreen
 import com.example.studentcenterapp.ui.splash.WelcomeScreen
-import com.example.studentcenterapp.ui.student.ForgotPasswordEmailScreen
-import com.example.studentcenterapp.ui.student.SignupSuccessScreen
-import com.example.studentcenterapp.ui.student.StudentLoginScreen
-import com.example.studentcenterapp.ui.student.StudentSignupScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardScreen
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModel
 import com.example.studentcenterapp.ui.staff.StaffDashboardViewModelFactory
@@ -38,6 +36,10 @@ import com.example.studentcenterapp.ui.staffauth.StaffLoginViewModelFactory
 import com.example.studentcenterapp.ui.staffauth.StaffSignupScreen
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModel
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModelFactory
+import com.example.studentcenterapp.ui.student.ForgotPasswordEmailScreen
+import com.example.studentcenterapp.ui.student.SignupSuccessScreen
+import com.example.studentcenterapp.ui.student.StudentLoginScreen
+import com.example.studentcenterapp.ui.student.StudentSignupScreen
 import com.example.studentcenterapp.ui.theme.StudentCenterTheme
 import com.example.studentcenterapp.viewmodel.appointment.TimeSlotDestinations
 import com.example.studentcenterapp.viewmodel.appointment.timeSlotGraph
@@ -48,6 +50,15 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
+
+// ✅ Confirm ekranına veri taşımak için anahtarlar
+private const val KEY_STUDENT_ID = "studentId"
+private const val KEY_DEPARTMENT_NAME = "departmentName"
+private const val KEY_SERVICE_ID = "serviceId"
+private const val KEY_SERVICE_NAME = "serviceName"
+private const val KEY_TIMESLOT_ID = "timeSlotId"
+private const val KEY_START_MILLIS = "scheduledStartMillis"
+private const val KEY_DATE_TEXT = "dateTimeText"
 
 @Composable
 fun StudentCenterApp() {
@@ -233,6 +244,39 @@ fun StudentCenterNavHost(
         )
 
         // -------------------------
+        // ✅ CONFIRM (bizim yaptığımız ekran)
+        // -------------------------
+        composable(Screen.Confirm.route) {
+            val prev = navController.previousBackStackEntry?.savedStateHandle
+
+            val studentId = prev?.get<String>(KEY_STUDENT_ID).orEmpty()
+            val departmentName = prev?.get<String>(KEY_DEPARTMENT_NAME).orEmpty()
+            val serviceId = prev?.get<String>(KEY_SERVICE_ID).orEmpty()
+            val serviceName = prev?.get<String>(KEY_SERVICE_NAME).orEmpty()
+            val timeSlotId = prev?.get<String>(KEY_TIMESLOT_ID).orEmpty()
+            val scheduledStartMillis = prev?.get<Long>(KEY_START_MILLIS) ?: 0L
+            val dateTimeText = prev?.get<String>(KEY_DATE_TEXT).orEmpty()
+
+            AppointmentConfirmationScreen(
+                studentId = studentId,
+                departmentName = departmentName,
+                serviceId = serviceId,
+                serviceName = serviceName,
+                timeSlotId = timeSlotId,
+                scheduledStartMillis = scheduledStartMillis,
+                dateTimeText = dateTimeText,
+                factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
+                onBack = { navController.popBackStack() },
+                onSuccessNavigate = {
+                    navController.navigate(Screen.Appointments.route) {
+                        popUpTo(Screen.Confirm.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        // -------------------------
         // Staff Dashboard (guarded)
         // -------------------------
         composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
@@ -268,10 +312,9 @@ fun StudentCenterNavHost(
             )
         }
 
-        // placeholders (kalsın)
+        // ✅ diğer placeholder’lar kalsın (mevcut akışları bozmasın)
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
-        composable(Screen.Confirm.route) { PlaceholderScreen("Confirm") }
         composable(Screen.Appointments.route) { PlaceholderScreen("Appointments") }
         composable(Screen.StaffDashboard.route) { PlaceholderScreen("Staff Dashboard") }
     }
