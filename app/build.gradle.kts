@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.benchmark.traceprocessor)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material)
+    implementation(libs.places)
 
     testImplementation(libs.junit)
     testImplementation(libs.junit4)

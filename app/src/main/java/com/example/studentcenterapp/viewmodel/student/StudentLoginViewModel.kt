@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.student.StudentRepository
+import com.example.studentcenterapp.data.student.StudentSession
 import kotlinx.coroutines.launch
 
 class StudentLoginViewModel(private val repository: StudentRepository) : ViewModel() {
@@ -25,6 +26,7 @@ class StudentLoginViewModel(private val repository: StudentRepository) : ViewMod
             isLoading = false
 
             result.onSuccess {
+                StudentSession.currentStudentId = email.trim()
                 onSuccess()
             }.onFailure {
                 errorMessage = "E-posta/Şifre uyuşmuyor"
