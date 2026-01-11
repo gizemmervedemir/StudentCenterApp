@@ -1,0 +1,32 @@
+ANDROID STUDIO'DA DOSYALARI BULMA REHBERİ
+=========================================
+
+Dosyalar FİZİKSEL OLARAK VAR! Terminal'de kontrol ettik.
+
+Android Studio'da görmek için:
+
+1. File → Sync Project with Gradle Files (EN ÖNEMLİ!)
+2. File → Invalidate Caches / Restart
+3. Android Studio'yu kapat-aç
+
+DOSYA YOLLARI (Copy-Paste için):
+================================
+
+app/src/main/java/com/example/studentcenterapp/data/local/database/AppDatabase.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/DatabaseInitializer.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/dao/DepartmentDao.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/dao/ServiceDao.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/dao/StaffDao.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/entity/DepartmentEntity.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/entity/ServiceEntity.kt
+app/src/main/java/com/example/studentcenterapp/data/local/database/entity/StaffEntity.kt
+app/src/main/java/com/example/studentcenterapp/data/local/preferences/UserSessionManager.kt
+app/src/main/java/com/example/studentcenterapp/data/department/RoomDepartmentRepository.kt
+app/src/main/java/com/example/studentcenterapp/data/service/RoomServiceRepository.kt
+app/src/main/java/com/example/studentcenterapp/data/remote/api/StudentCenterApi.kt
+app/src/main/java/com/example/studentcenterapp/StudentCenterApplication.kt
+
+DEĞİŞTİRİLEN DOSYALAR:
+=====================
+app/src/main/java/com/example/studentcenterapp/data/AppDI.kt
+app/src/main/AndroidManifest.xml
