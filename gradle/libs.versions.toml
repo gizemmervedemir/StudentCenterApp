@@ -22,7 +22,7 @@ turbine = "1.1.0"
 places = "5.1.1"
 room = "2.6.1"
 datastore = "1.1.1"
-ksp = "2.2.21-1.0.28"
+ksp = "2.0.21-1.0.28"
 
 
 [libraries]
