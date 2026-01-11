@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.Flow
 interface AppointmentRepository {
     fun getAppointmentsForStudent(studentId: String): Flow<List<AppointmentRecord>>
 
+    // ✅ NEW: Detail ekranı için ID ile tek randevu
+    fun getAppointmentById(appointmentId: String): Flow<AppointmentRecord?>
+
+
     suspend fun createAppointment(
         studentId: String,
         serviceId: String,

@@ -40,7 +40,6 @@ import com.example.studentcenterapp.ui.staffauth.StaffLoginViewModelFactory
 import com.example.studentcenterapp.ui.staffauth.StaffSignupScreen
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModel
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModelFactory
-import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.student.ForgotPasswordEmailScreen
 import com.example.studentcenterapp.ui.student.SignupSuccessScreen
 import com.example.studentcenterapp.ui.student.StudentLoginScreen
@@ -57,10 +56,19 @@ import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
 
-// ✅ Appointments için query param anahtarı
+// ✅ Appointment Detail imports (SENİN DOSYA PATH'İNE GÖRE DÜZELT)
+// Eğer AppointmentDetailScreen farklı paketteyse bunu düzelt.
+import com.example.studentcenterapp.ui.appointments.components.AppointmentDetailScreen
+import com.example.studentcenterapp.viewmodel.appointment.AppointmentDetailViewModelFactory
+
+import com.example.studentcenterapp.ui.appointment.AppointmentDetailRoute
+
+// -------------------------
+// Query param key for appointments list
+// -------------------------
 private const val ARG_STUDENT_ID = "studentId"
 
-// ✅ route builder
+// Route builder for appointments list
 private fun appointmentsRoute(studentId: String): String {
     return "${Screen.Appointments.route}?$ARG_STUDENT_ID=$studentId"
 }
@@ -88,8 +96,12 @@ fun StudentCenterNavHost(
         startDestination = Screen.Splash.route
     ) {
 
+        // -------------------------
+        // Splash -> Welcome
+        // -------------------------
         composable(Screen.Splash.route) {
             val splashViewModel: SplashViewModel = viewModel()
+
             SplashScreen(
                 onFinished = {
                     navController.navigate(Screen.Welcome.route) {
@@ -127,34 +139,6 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(Screen.StudentLogin.route) {
-            val loginViewModel: StudentLoginViewModel = viewModel(
-                factory = StudentLoginViewModel.Factory
-            )
-
-            StudentLoginScreen(
-                viewModel = loginViewModel,
-                onSignupClick = { navController.navigate(Screen.StudentSignup.route) },
-                onForgotPasswordClick = { navController.navigate(Screen.ForgotPasswordEmail.route) },
-                onLoginSuccess = {
-                    navController.navigate(Screen.Departments.route) {
-                        popUpTo(Screen.Welcome.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable(Screen.SignupSuccess.route) {
-            SignupSuccessScreen(
-                onLoginClick = {
-                    navController.navigate(Screen.StudentLogin.route) {
-                        popUpTo(Screen.Welcome.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-
         composable(Screen.StaffSignup.route) {
             val vm: StaffSignupViewModel = viewModel(
                 factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository)
@@ -171,12 +155,23 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(Screen.ForgotPasswordEmail.route) {
-            val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
-            ForgotPasswordEmailScreen(
-                viewModel = forgotPasswordViewModel,
-                onCodeSent = { navController.navigate(Screen.ForgotPasswordCode.route) },
-                onBackClick = { navController.popBackStack() }
+        // -------------------------
+        // Student Auth
+        // -------------------------
+        composable(Screen.StudentLogin.route) {
+            val loginViewModel: StudentLoginViewModel = viewModel(
+                factory = StudentLoginViewModel.Factory
+            )
+
+            StudentLoginScreen(
+                viewModel = loginViewModel,
+                onSignupClick = { navController.navigate(Screen.StudentSignup.route) },
+                onForgotPasswordClick = { navController.navigate(Screen.ForgotPasswordEmail.route) },
+                onLoginSuccess = {
+                    navController.navigate(Screen.Departments.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -196,8 +191,29 @@ fun StudentCenterNavHost(
             )
         }
 
+        composable(Screen.SignupSuccess.route) {
+            SignupSuccessScreen(
+                onLoginClick = {
+                    navController.navigate(Screen.StudentLogin.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Screen.ForgotPasswordEmail.route) {
+            val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+
+            ForgotPasswordEmailScreen(
+                viewModel = forgotPasswordViewModel,
+                onCodeSent = { navController.navigate(Screen.ForgotPasswordCode.route) },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
         // -------------------------
-        // Student flow (Departments -> Services -> Slots -> Confirm -> Appointments)
+        // Student flow: Departments -> Services -> Slots -> Confirm -> Appointments
         // -------------------------
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(
@@ -212,19 +228,14 @@ fun StudentCenterNavHost(
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
                 onDepartmentClick = { departmentId, departmentName ->
-
                     val handle = navController.currentBackStackEntry?.savedStateHandle
-
-                    // departmentName zaten geldi, state’ten aramana gerek yok
                     handle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, departmentName)
 
-                    // studentId (session’dan)
                     val sid = StudentSession.currentStudentId
                     handle?.set(ConfirmationNavKeys.KEY_STUDENT_ID, sid)
 
                     navController.navigate("services/$departmentId")
                 }
-
             )
         }
 
@@ -236,15 +247,17 @@ fun StudentCenterNavHost(
             )
             val state by vm.uiState.collectAsState()
 
-            // ✅ Departments entry'sinden gelen değerleri Services entry'sine kopyala
             LaunchedEffect(departmentId) {
                 val prevHandle = navController.previousBackStackEntry?.savedStateHandle
                 val currentHandle = navController.currentBackStackEntry?.savedStateHandle
 
-                val deptName = prevHandle?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
-                val sid = prevHandle?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID)
-                    .orEmpty()
-                    .ifBlank { StudentSession.currentStudentId }
+                val deptName =
+                    prevHandle?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
+
+                val sid =
+                    prevHandle?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID)
+                        .orEmpty()
+                        .ifBlank { StudentSession.currentStudentId }
 
                 currentHandle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, deptName)
                 currentHandle?.set(ConfirmationNavKeys.KEY_STUDENT_ID, sid)
@@ -265,18 +278,17 @@ fun StudentCenterNavHost(
 
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 }
-
             )
         }
 
-        // ✅ TimeSlot flow (Selection + Calendar)
+        // ✅ TimeSlot flow graph
         timeSlotGraph(
             navController = navController,
             timeSlotRepository = timeSlotRepository
         )
 
         // -------------------------
-        // ✅ CONFIRM
+        // Confirm
         // -------------------------
         composable(Screen.Confirm.route) {
             val prev = navController.previousBackStackEntry?.savedStateHandle
@@ -313,7 +325,7 @@ fun StudentCenterNavHost(
         }
 
         // -------------------------
-        // ✅ APPOINTMENTS
+        // Appointments List
         // -------------------------
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
@@ -333,9 +345,48 @@ fun StudentCenterNavHost(
 
             AppointmentListScreen(
                 factory = factory,
-                onAppointmentClick = { _ ->
-                    // TODO AppointmentDetailScreen
+                onAppointmentClick = { appointmentId ->
+                    navController.navigate(Screen.AppointmentDetail.createRoute(appointmentId))
                 }
+            )
+        }
+
+        composable(
+            route = Screen.AppointmentDetail.route,
+            arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val appointmentId = backStackEntry.arguments?.getString("appointmentId").orEmpty()
+
+            AppointmentDetailRoute(
+                appointmentId = appointmentId,
+                repository = AppDI.appointmentRepository,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        // -------------------------
+        // ✅ Appointment Detail
+        // -------------------------
+        composable(
+            route = Screen.AppointmentDetail.route,
+            arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
+        ) { backStackEntry ->
+
+            val appointmentId = backStackEntry.arguments?.getString("appointmentId").orEmpty()
+
+            val vm: com.example.studentcenterapp.viewmodel.appointment.AppointmentDetailViewModel =
+                viewModel(
+                    factory = com.example.studentcenterapp.viewmodel.appointment.AppointmentDetailViewModelFactory(
+                        appointmentId = appointmentId,
+                        repository = AppDI.appointmentRepository
+                    )
+                )
+
+            val state by vm.uiState.collectAsState()
+
+            com.example.studentcenterapp.ui.appointments.components.AppointmentDetailScreen(
+                state = state,
+                onBack = { navController.popBackStack() },
+                onCancelClick = { vm.cancelAppointment() }
             )
         }
 
@@ -375,6 +426,7 @@ fun StudentCenterNavHost(
             )
         }
 
+        // Placeholders
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
         composable(Screen.StaffDashboard.route) { PlaceholderScreen("Staff Dashboard") }
