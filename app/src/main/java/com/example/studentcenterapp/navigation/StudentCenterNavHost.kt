@@ -63,7 +63,7 @@ fun StudentCenterApp() {
 fun StudentCenterNavHost(
     navController: NavHostController
 ) {
-    // ✅ TimeSlot için tek instance dataSource + repository
+    // ✅ TimeSlot için tek instance dataSource + repository (NavHost ömrü boyunca sabit)
     val timeSlotDataSource = remember { InMemoryDataSource() }
     val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
 
@@ -118,12 +118,8 @@ fun StudentCenterNavHost(
 
             StudentLoginScreen(
                 viewModel = loginViewModel,
-                onSignupClick = {
-                    navController.navigate(Screen.StudentSignup.route)
-                },
-                onForgotPasswordClick = {
-                    navController.navigate(Screen.ForgotPasswordEmail.route)
-                },
+                onSignupClick = { navController.navigate(Screen.StudentSignup.route) },
+                onForgotPasswordClick = { navController.navigate(Screen.ForgotPasswordEmail.route) },
                 onLoginSuccess = {
                     navController.navigate(Screen.Departments.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -185,7 +181,7 @@ fun StudentCenterNavHost(
         }
 
         // -------------------------
-        // Student flow (existing)
+        // Student flow (Departments -> Services)
         // -------------------------
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(
@@ -224,30 +220,13 @@ fun StudentCenterNavHost(
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
                 onServiceClick = { serviceId ->
-                    // ✅ Bunu bozmadık. Aynen kaldı.
-                    navController.navigate("slots/$serviceId")
+                    // ✅ Direkt timeSlot flow’a giriyoruz (redirect yok)
+                    navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 }
             )
         }
 
-        // -------------------------
-        // ✅ slots placeholder -> timeSlotGraph redirect
-        // -------------------------
-        composable("slots/{serviceId}") { backStackEntry ->
-            val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
-
-            LaunchedEffect(serviceId) {
-                if (serviceId.isNotBlank()) {
-                    navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
-                    // back basınca ServiceList'e dönsün
-                    navController.popBackStack()
-                }
-            }
-
-            PlaceholderScreen("Loading slots...")
-        }
-
-        // ✅ TimeSlot graph’i sisteme ekledik (Selection + Calendar)
+        // ✅ TimeSlot flow (Selection + Calendar)
         timeSlotGraph(
             navController = navController,
             timeSlotRepository = timeSlotRepository
@@ -289,7 +268,7 @@ fun StudentCenterNavHost(
             )
         }
 
-        // placeholders (şimdilik kalsın)
+        // placeholders (kalsın)
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
         composable(Screen.Confirm.route) { PlaceholderScreen("Confirm") }
