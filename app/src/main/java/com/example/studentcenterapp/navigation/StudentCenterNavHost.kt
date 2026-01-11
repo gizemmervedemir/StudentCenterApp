@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -17,6 +18,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.studentcenterapp.data.AppDI
+import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
+import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.example.studentcenterapp.ui.service.ServiceListScreen
 import com.example.studentcenterapp.ui.service.ServiceListViewModel
 import com.example.studentcenterapp.ui.service.ServiceListViewModelFactory
@@ -36,6 +39,8 @@ import com.example.studentcenterapp.ui.staffauth.StaffSignupScreen
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModel
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModelFactory
 import com.example.studentcenterapp.ui.theme.StudentCenterTheme
+import com.example.studentcenterapp.viewmodel.appointment.TimeSlotDestinations
+import com.example.studentcenterapp.viewmodel.appointment.timeSlotGraph
 import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModel
 import com.example.studentcenterapp.viewmodel.department.DepartmentListViewModelFactory
@@ -43,7 +48,6 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
-
 
 @Composable
 fun StudentCenterApp() {
@@ -59,6 +63,10 @@ fun StudentCenterApp() {
 fun StudentCenterNavHost(
     navController: NavHostController
 ) {
+    // ✅ TimeSlot için tek instance dataSource + repository
+    val timeSlotDataSource = remember { InMemoryDataSource() }
+    val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route
@@ -78,7 +86,7 @@ fun StudentCenterNavHost(
 
         composable(Screen.Welcome.route) {
             WelcomeScreen(
-                onStudentClick = { navController.navigate(Screen.StudentLogin.route)},
+                onStudentClick = { navController.navigate(Screen.StudentLogin.route) },
                 onStaffClick = { navController.navigate(Screen.StaffLogin.route) }
             )
         }
@@ -114,33 +122,27 @@ fun StudentCenterNavHost(
                     navController.navigate(Screen.StudentSignup.route)
                 },
                 onForgotPasswordClick = {
-                    // İŞTE BURADA: İlk tasarladığımız ResetPassword ekranına gönderiyoruz
                     navController.navigate(Screen.ForgotPasswordEmail.route)
                 },
                 onLoginSuccess = {
-                    // Giriş başarılı! Şimdi ana ekrana gönderiyoruz.
                     navController.navigate(Screen.Departments.route) {
-                        // Welcome ve Login ekranlarını geri tuşu yığınından siliyoruz
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }
             )
         }
+
         composable(Screen.SignupSuccess.route) {
             SignupSuccessScreen(
                 onLoginClick = {
-                    // Kullanıcıyı Login ekranına geri gönderir
                     navController.navigate(Screen.StudentLogin.route) {
-                        // Bu kısım çok önemli: Geri tuşuna basınca tekrar başarı ekranı gelmesin diye
-                        // Signup ve Success ekranlarını yığından temizleriz.
-                        popUpTo(Screen.Welcome.route) {
-                            inclusive = true
-                        } // Login ekranını da yığından temizleyip yeniden oluştur
-                        launchSingleTop = true // Aynı ekranı üst üste yığma
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
         }
+
         composable(Screen.StaffSignup.route) {
             val vm: StaffSignupViewModel = viewModel(
                 factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository)
@@ -157,7 +159,6 @@ fun StudentCenterNavHost(
             )
         }
 
-
         composable(Screen.ForgotPasswordEmail.route) {
             val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
             ForgotPasswordEmailScreen(
@@ -166,9 +167,8 @@ fun StudentCenterNavHost(
                 onBackClick = { navController.popBackStack() }
             )
         }
-        // NavHost dosyanın içine, StudentLogin composable'ından hemen sonra ekle:
+
         composable(Screen.StudentSignup.route) {
-            // ViewModel'i factory ile bağlıyoruz (Issue'da istendiği gibi)
             val signupViewModel: StudentSignupViewModel = viewModel(
                 factory = StudentSignupViewModel.Factory
             )
@@ -176,15 +176,13 @@ fun StudentCenterNavHost(
             StudentSignupScreen(
                 viewModel = signupViewModel,
                 onSignupSuccess = {
-                    // Başarılı olduğunda SignupSuccess ekranına yönlendir
                     navController.navigate(Screen.SignupSuccess.route) {
-                        popUpTo(Screen.StudentSignup.route) { inclusive = true } // Signup ekranını yığından temizle
+                        popUpTo(Screen.StudentSignup.route) { inclusive = true }
                     }
                 },
                 onBackClick = { navController.popBackStack() }
             )
         }
-        //same
 
         // -------------------------
         // Student flow (existing)
@@ -222,10 +220,38 @@ fun StudentCenterNavHost(
             ServiceListScreen(
                 state = state,
                 currentRoute = Screen.Services.route,
-                onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
-                onServiceClick = { serviceId -> navController.navigate("slots/$serviceId") }
+                onTabSelected = { tab ->
+                    navController.navigate(tab.route) { launchSingleTop = true }
+                },
+                onServiceClick = { serviceId ->
+                    // ✅ Bunu bozmadık. Aynen kaldı.
+                    navController.navigate("slots/$serviceId")
+                }
             )
         }
+
+        // -------------------------
+        // ✅ slots placeholder -> timeSlotGraph redirect
+        // -------------------------
+        composable("slots/{serviceId}") { backStackEntry ->
+            val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
+
+            LaunchedEffect(serviceId) {
+                if (serviceId.isNotBlank()) {
+                    navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
+                    // back basınca ServiceList'e dönsün
+                    navController.popBackStack()
+                }
+            }
+
+            PlaceholderScreen("Loading slots...")
+        }
+
+        // ✅ TimeSlot graph’i sisteme ekledik (Selection + Calendar)
+        timeSlotGraph(
+            navController = navController,
+            timeSlotRepository = timeSlotRepository
+        )
 
         // -------------------------
         // Staff Dashboard (guarded)
@@ -263,12 +289,7 @@ fun StudentCenterNavHost(
             )
         }
 
-        // placeholders
-        composable("slots/{serviceId}") { backStackEntry ->
-            val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
-            PlaceholderScreen("Slots for serviceId = $serviceId")
-        }
-
+        // placeholders (şimdilik kalsın)
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
         composable(Screen.Confirm.route) { PlaceholderScreen("Confirm") }
