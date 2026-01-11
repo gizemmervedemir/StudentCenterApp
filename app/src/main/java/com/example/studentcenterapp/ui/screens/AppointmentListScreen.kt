@@ -1,5 +1,7 @@
 package com.example.studentcenterapp.ui.screens
 
+import com.example.studentcenterapp.ui.appointments.components.StatusChip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -165,7 +167,7 @@ private fun AppointmentCardItem(
                 }
 
                 Spacer(Modifier.width(12.dp))
-                SimpleStatusChip(status = appointment.status)
+                StatusChip(status = appointment.status)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -179,21 +181,21 @@ private fun AppointmentCardItem(
 /**
  * ✅ Basit chip. (#40'da StatusChip component gelince bunu kaldırıp StatusChip'e geçersin.)
  */
-@Composable
-private fun SimpleStatusChip(status: String) {
-    val (bg, fg, label) = when (status.lowercase()) {
-        "approved" -> Triple(Color(0xFFD7F5DD), Color(0xFF1B5E20), "Approved")
-        "cancelled" -> Triple(Color(0xFFFFE0E0), Color(0xFFB71C1C), "Cancelled")
-        "pending" -> Triple(Color(0xFFFFF4D1), Color(0xFF8A6D00), "Pending")
-        else -> Triple(Color(0xFFE0E0E0), Color(0xFF424242), status)
-    }
-
-    Text(
-        text = label,
-        color = fg,
-        fontSize = 12.sp,
-        modifier = Modifier
-            .background(bg, RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-    )
-}
+//@Composable
+//private fun SimpleStatusChip(status: String) {
+//    val (bg, fg, label) = when (status.lowercase()) {
+//        "approved" -> Triple(Color(0xFFD7F5DD), Color(0xFF1B5E20), "Approved")
+//        "cancelled" -> Triple(Color(0xFFFFE0E0), Color(0xFFB71C1C), "Cancelled")
+//        "pending" -> Triple(Color(0xFFFFF4D1), Color(0xFF8A6D00), "Pending")
+//        else -> Triple(Color(0xFFE0E0E0), Color(0xFF424242), status)
+//    }
+//
+//    Text(
+//        text = label,
+//        color = fg,
+//        fontSize = 12.sp,
+//        modifier = Modifier
+//            .background(bg, RoundedCornerShape(999.dp))
+//            .padding(horizontal = 10.dp, vertical = 6.dp)
+//    )
+//}

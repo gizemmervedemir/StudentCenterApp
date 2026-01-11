@@ -16,7 +16,8 @@ fun StatusChip(
     status: String,
     modifier: Modifier = Modifier
 ) {
-    val s = status.lowercase()
+    val s = status.trim().lowercase()
+
 
     val (bg, fg, label) = when (s) {
         "approved" -> Triple(Color(0xFFD7F5DD), Color(0xFF1B5E20), "Approved")
