@@ -15,21 +15,25 @@ import com.example.studentcenterapp.data.student.InMemoryStudentDataSource
 import com.example.studentcenterapp.data.student.StudentRepository
 import com.example.studentcenterapp.data.student.StudentRepositoryImpl
 
-// ✅ YENİ: appointment imports
+// ✅ Appointment
 import com.example.studentcenterapp.data.appointment.AppointmentRepository
 import com.example.studentcenterapp.data.appointment.AppointmentRepositoryImpl
 import com.example.studentcenterapp.data.appointment.InMemoryAppointmentDataSource
 
 object AppDI {
+
     val departmentRepository: DepartmentRepository by lazy {
         DepartmentRepositoryImpl(InMemoryDepartmentDataSource())
     }
+
     val studentRepository: StudentRepository by lazy {
         StudentRepositoryImpl(InMemoryStudentDataSource())
     }
+
     val serviceRepository: ServiceRepository by lazy {
         ServiceRepositoryImpl(InMemoryServiceDataSource())
     }
+
     val staffRepository: StaffRepository by lazy {
         StaffRepositoryImpl(InMemoryAppointmentAdminDataSource())
     }
@@ -38,7 +42,7 @@ object AppDI {
         FakeStaffAuthRepository()
     }
 
-    // ✅ #37 için gerekli: AppointmentRepository
+    // ✅ Appointment repository (Confirm + Appointments list için kullanılacak)
     val appointmentRepository: AppointmentRepository by lazy {
         AppointmentRepositoryImpl(InMemoryAppointmentDataSource())
     }

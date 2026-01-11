@@ -22,6 +22,7 @@ import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.example.studentcenterapp.ui.confirmation.AppointmentConfirmationViewModelFactory
 import com.example.studentcenterapp.ui.screens.AppointmentConfirmationScreen
+import com.example.studentcenterapp.ui.screens.AppointmentListScreen
 import com.example.studentcenterapp.ui.service.ServiceListScreen
 import com.example.studentcenterapp.ui.service.ServiceListViewModel
 import com.example.studentcenterapp.ui.service.ServiceListViewModelFactory
@@ -41,6 +42,7 @@ import com.example.studentcenterapp.ui.student.SignupSuccessScreen
 import com.example.studentcenterapp.ui.student.StudentLoginScreen
 import com.example.studentcenterapp.ui.student.StudentSignupScreen
 import com.example.studentcenterapp.ui.theme.StudentCenterTheme
+import com.example.studentcenterapp.viewmodel.appointment.AppointmentListViewModelFactory
 import com.example.studentcenterapp.viewmodel.appointment.TimeSlotDestinations
 import com.example.studentcenterapp.viewmodel.appointment.timeSlotGraph
 import com.example.studentcenterapp.viewmodel.department.DepartmentListScreen
@@ -51,7 +53,7 @@ import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
 
-// ✅ Confirm ekranına veri taşımak için anahtarlar
+// ✅ Confirm ekranına veri taşımak için anahtarlar (SavedStateHandle ile)
 private const val KEY_STUDENT_ID = "studentId"
 private const val KEY_DEPARTMENT_NAME = "departmentName"
 private const val KEY_SERVICE_ID = "serviceId"
@@ -59,6 +61,14 @@ private const val KEY_SERVICE_NAME = "serviceName"
 private const val KEY_TIMESLOT_ID = "timeSlotId"
 private const val KEY_START_MILLIS = "scheduledStartMillis"
 private const val KEY_DATE_TEXT = "dateTimeText"
+
+// ✅ Appointments için query param anahtarı
+private const val ARG_STUDENT_ID = "studentId"
+
+// ✅ route builder
+private fun appointmentsRoute(studentId: String): String {
+    return "${Screen.Appointments.route}?$ARG_STUDENT_ID=$studentId"
+}
 
 @Composable
 fun StudentCenterApp() {
@@ -231,7 +241,6 @@ fun StudentCenterNavHost(
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
                 onServiceClick = { serviceId ->
-                    // ✅ Direkt timeSlot flow’a giriyoruz (redirect yok)
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 }
             )
@@ -268,10 +277,32 @@ fun StudentCenterNavHost(
                 factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
                 onBack = { navController.popBackStack() },
                 onSuccessNavigate = {
-                    navController.navigate(Screen.Appointments.route) {
+                    // ✅ studentId’yi route ile taşıyoruz
+                    navController.navigate(appointmentsRoute(studentId)) {
                         popUpTo(Screen.Confirm.route) { inclusive = true }
                         launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        // -------------------------
+        // ✅ APPOINTMENTS (Issue #38)
+        // -------------------------
+        composable("${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}") { backStackEntry ->
+            val studentId = backStackEntry.arguments?.getString(ARG_STUDENT_ID).orEmpty()
+
+            val factory = AppointmentListViewModelFactory(
+                studentId = studentId,
+                appointmentRepository = AppDI.appointmentRepository
+            )
+
+            AppointmentListScreen(
+                factory = factory,
+                onAppointmentClick = { appointmentId ->
+                    // TODO: AppointmentDetailScreen by you (Issue says navigate on click)
+                    // şimdilik placeholder route yoksa popBackStack yapma
+                    // navController.navigate("appointmentDetail/$appointmentId")
                 }
             )
         }
@@ -315,7 +346,6 @@ fun StudentCenterNavHost(
         // ✅ diğer placeholder’lar kalsın (mevcut akışları bozmasın)
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
-        composable(Screen.Appointments.route) { PlaceholderScreen("Appointments") }
         composable(Screen.StaffDashboard.route) { PlaceholderScreen("Staff Dashboard") }
     }
 }
