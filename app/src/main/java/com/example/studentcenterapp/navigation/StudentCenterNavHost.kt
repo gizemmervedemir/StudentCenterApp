@@ -14,11 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
+import com.example.studentcenterapp.data.student.StudentSession
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.example.studentcenterapp.ui.confirmation.AppointmentConfirmationViewModelFactory
 import com.example.studentcenterapp.ui.screens.AppointmentConfirmationScreen
@@ -37,6 +40,7 @@ import com.example.studentcenterapp.ui.staffauth.StaffLoginViewModelFactory
 import com.example.studentcenterapp.ui.staffauth.StaffSignupScreen
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModel
 import com.example.studentcenterapp.ui.staffauth.StaffSignupViewModelFactory
+import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.student.ForgotPasswordEmailScreen
 import com.example.studentcenterapp.ui.student.SignupSuccessScreen
 import com.example.studentcenterapp.ui.student.StudentLoginScreen
@@ -52,15 +56,6 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.ForgotPasswordViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentLoginViewModel
 import com.example.studentcenterapp.viewmodel.student.StudentSignupViewModel
-
-// ✅ Confirm ekranına veri taşımak için anahtarlar (SavedStateHandle ile)
-private const val KEY_STUDENT_ID = "studentId"
-private const val KEY_DEPARTMENT_NAME = "departmentName"
-private const val KEY_SERVICE_ID = "serviceId"
-private const val KEY_SERVICE_NAME = "serviceName"
-private const val KEY_TIMESLOT_ID = "timeSlotId"
-private const val KEY_START_MILLIS = "scheduledStartMillis"
-private const val KEY_DATE_TEXT = "dateTimeText"
 
 // ✅ Appointments için query param anahtarı
 private const val ARG_STUDENT_ID = "studentId"
@@ -202,7 +197,7 @@ fun StudentCenterNavHost(
         }
 
         // -------------------------
-        // Student flow (Departments -> Services)
+        // Student flow (Departments -> Services -> Slots -> Confirm -> Appointments)
         // -------------------------
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(
@@ -216,9 +211,20 @@ fun StudentCenterNavHost(
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
-                onDepartmentClick = { departmentId ->
+                onDepartmentClick = { departmentId, departmentName ->
+
+                    val handle = navController.currentBackStackEntry?.savedStateHandle
+
+                    // departmentName zaten geldi, state’ten aramana gerek yok
+                    handle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, departmentName)
+
+                    // studentId (session’dan)
+                    val sid = StudentSession.currentStudentId
+                    handle?.set(ConfirmationNavKeys.KEY_STUDENT_ID, sid)
+
                     navController.navigate("services/$departmentId")
                 }
+
             )
         }
 
@@ -230,7 +236,19 @@ fun StudentCenterNavHost(
             )
             val state by vm.uiState.collectAsState()
 
+            // ✅ Departments entry'sinden gelen değerleri Services entry'sine kopyala
             LaunchedEffect(departmentId) {
+                val prevHandle = navController.previousBackStackEntry?.savedStateHandle
+                val currentHandle = navController.currentBackStackEntry?.savedStateHandle
+
+                val deptName = prevHandle?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
+                val sid = prevHandle?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID)
+                    .orEmpty()
+                    .ifBlank { StudentSession.currentStudentId }
+
+                currentHandle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, deptName)
+                currentHandle?.set(ConfirmationNavKeys.KEY_STUDENT_ID, sid)
+
                 if (departmentId.isNotBlank()) vm.loadServices(departmentId)
             }
 
@@ -240,9 +258,14 @@ fun StudentCenterNavHost(
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },
-                onServiceClick = { serviceId ->
+                onServiceClick = { serviceId, serviceName ->
+                    val handle = navController.currentBackStackEntry?.savedStateHandle
+                    handle?.set(ConfirmationNavKeys.KEY_SERVICE_ID, serviceId)
+                    handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
+
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 }
+
             )
         }
 
@@ -253,18 +276,18 @@ fun StudentCenterNavHost(
         )
 
         // -------------------------
-        // ✅ CONFIRM (bizim yaptığımız ekran)
+        // ✅ CONFIRM
         // -------------------------
         composable(Screen.Confirm.route) {
             val prev = navController.previousBackStackEntry?.savedStateHandle
 
-            val studentId = prev?.get<String>(KEY_STUDENT_ID).orEmpty()
-            val departmentName = prev?.get<String>(KEY_DEPARTMENT_NAME).orEmpty()
-            val serviceId = prev?.get<String>(KEY_SERVICE_ID).orEmpty()
-            val serviceName = prev?.get<String>(KEY_SERVICE_NAME).orEmpty()
-            val timeSlotId = prev?.get<String>(KEY_TIMESLOT_ID).orEmpty()
-            val scheduledStartMillis = prev?.get<Long>(KEY_START_MILLIS) ?: 0L
-            val dateTimeText = prev?.get<String>(KEY_DATE_TEXT).orEmpty()
+            val studentId = prev?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID).orEmpty()
+            val departmentName = prev?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
+            val serviceId = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_ID).orEmpty()
+            val serviceName = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_NAME).orEmpty()
+            val timeSlotId = prev?.get<String>(ConfirmationNavKeys.KEY_TIMESLOT_ID).orEmpty()
+            val scheduledStartMillis = prev?.get<Long>(ConfirmationNavKeys.KEY_START_MILLIS) ?: 0L
+            val dateTimeText = prev?.get<String>(ConfirmationNavKeys.KEY_DATE_TEXT).orEmpty()
 
             AppointmentConfirmationScreen(
                 studentId = studentId,
@@ -277,19 +300,30 @@ fun StudentCenterNavHost(
                 factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
                 onBack = { navController.popBackStack() },
                 onSuccessNavigate = {
-                    // ✅ studentId’yi route ile taşıyoruz
-                    navController.navigate(appointmentsRoute(studentId)) {
-                        popUpTo(Screen.Confirm.route) { inclusive = true }
-                        launchSingleTop = true
+                    if (studentId.isNotBlank()) {
+                        navController.navigate(appointmentsRoute(studentId)) {
+                            popUpTo(Screen.Confirm.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } else {
+                        navController.popBackStack()
                     }
                 }
             )
         }
 
         // -------------------------
-        // ✅ APPOINTMENTS (Issue #38)
+        // ✅ APPOINTMENTS
         // -------------------------
-        composable("${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}") { backStackEntry ->
+        composable(
+            route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
+            arguments = listOf(
+                navArgument(ARG_STUDENT_ID) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
             val studentId = backStackEntry.arguments?.getString(ARG_STUDENT_ID).orEmpty()
 
             val factory = AppointmentListViewModelFactory(
@@ -299,10 +333,8 @@ fun StudentCenterNavHost(
 
             AppointmentListScreen(
                 factory = factory,
-                onAppointmentClick = { appointmentId ->
-                    // TODO: AppointmentDetailScreen by you (Issue says navigate on click)
-                    // şimdilik placeholder route yoksa popBackStack yapma
-                    // navController.navigate("appointmentDetail/$appointmentId")
+                onAppointmentClick = { _ ->
+                    // TODO AppointmentDetailScreen
                 }
             )
         }
@@ -343,7 +375,6 @@ fun StudentCenterNavHost(
             )
         }
 
-        // ✅ diğer placeholder’lar kalsın (mevcut akışları bozmasın)
         composable(Screen.Services.route) { PlaceholderScreen("Services") }
         composable(Screen.Slots.route) { PlaceholderScreen("Slots") }
         composable(Screen.StaffDashboard.route) { PlaceholderScreen("Staff Dashboard") }

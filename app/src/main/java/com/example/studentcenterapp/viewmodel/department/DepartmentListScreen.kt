@@ -56,7 +56,8 @@ fun DepartmentListScreen(
     state: UiState<List<Department>>,
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
-    onDepartmentClick: (String) -> Unit
+    onDepartmentClick: (departmentId: String, departmentName: String) -> Unit
+
 ) {
     Scaffold(
         topBar = { AppTopBar(title = "Departmanlar") },
@@ -88,7 +89,7 @@ fun DepartmentListScreen(
 @Composable
 private fun DepartmentListContent(
     state: UiState<List<Department>>,
-    onDepartmentClick: (String) -> Unit
+    onDepartmentClick:(departmentId: String, departmentName: String) -> Unit
 ) {
     // 8 birimlik liste (state.data içinden gelecek)
 
@@ -164,7 +165,7 @@ private fun DepartmentListContent(
                             DepartmentRow(
                                 title = dep.name,
                                 isSelected = dep.name.contains("Psikolojik"),
-                                onClick = { onDepartmentClick(dep.id) }
+                                onClick = {onDepartmentClick(dep.id, dep.name)}
                             )
                         }
                     }

@@ -33,8 +33,8 @@ fun ServiceListScreen(
     state: UiState<List<Service>>,
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
-    onServiceClick: (serviceId: String) -> Unit,
-    onRetry: (() -> Unit)? = null // optional (istersen VM.loadServices bağlarsın)
+    onServiceClick: (serviceId: String, serviceName: String) -> Unit,
+    onRetry: (() -> Unit)? = null
 ) {
     Scaffold(
         topBar = { AppTopBar(title = "Services") },
@@ -85,7 +85,7 @@ fun ServiceListScreen(
                             items(services, key = { it.id }) { service ->
                                 ServiceListItem(
                                     service = service,
-                                    onClick = { onServiceClick(service.id) }
+                                    onClick = { onServiceClick(service.id, service.name) }
                                 )
                             }
                         }
