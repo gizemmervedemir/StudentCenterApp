@@ -13,25 +13,27 @@ class AppointmentRepositoryImpl(
         }
     }
 
+    override fun getAppointmentById(appointmentId: String): Flow<AppointmentRecord?> {
+        return dataSource.appointmentsFlow.map { list ->
+            list.firstOrNull { it.id == appointmentId }
+        }
+    }
+
     override suspend fun createAppointment(
         studentId: String,
         serviceId: String,
         timeSlotId: String,
         scheduledStartMillis: Long
     ): Result<Unit> {
-        return runCatching {
-            dataSource.add(
-                studentId = studentId,
-                serviceId = serviceId,
-                timeSlotId = timeSlotId,
-                scheduledStartMillis = scheduledStartMillis
-            )
-        }
+        return dataSource.createAppointment(
+            studentId = studentId,
+            serviceId = serviceId,
+            timeSlotId = timeSlotId,
+            scheduledStartMillis = scheduledStartMillis
+        )
     }
 
     override suspend fun cancelAppointment(appointmentId: String): Result<Unit> {
-        return runCatching {
-            dataSource.remove(appointmentId)
-        }
+        return dataSource.cancelAppointment(appointmentId)
     }
 }
