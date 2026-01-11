@@ -20,14 +20,14 @@ class AppointmentHistoryViewModel(
     private val appointmentRepository: AppointmentRepository
 ) : ViewModel() {
 
-    data class UiState(
-        val isLoading: Boolean = false,
-        val appointments: List<Appointment> = emptyList(),
-        val errorMessage: String? = null
-    )
+//    data class UiState(
+//        val isLoading: Boolean = false,
+//        val appointments: List<Appointment> = emptyList(),
+//        val errorMessage: String? = null
+//    )
 
-    private val _uiState = MutableStateFlow(UiState(isLoading = true))
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(AppointmentHistoryUiState(isLoading = true))
+    val uiState: StateFlow<AppointmentHistoryUiState> = _uiState.asStateFlow()
 
     init {
         loadHistory()
