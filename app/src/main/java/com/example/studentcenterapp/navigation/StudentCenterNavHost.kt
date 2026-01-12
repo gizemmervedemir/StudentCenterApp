@@ -61,20 +61,36 @@ fun StudentCenterNavHost(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Personel ID'sini sakla (Home'a dönerken lazım olacak)
+    var savedStaffId by remember { mutableStateOf<String?>(null) }
+
     // KULLANICI ROLÜNÜ TESPİT ET (Önemli: Personel mi Öğrenci mi?)
     // Bu mantık, personel dashboard'dan başka sekmeye geçse bile rolü hatırlamasını sağlar.
-    val isUserStaff = remember(navBackStackEntry) {
+    val isUserStaff = remember(navBackStackEntry, savedStaffId) {
         currentRoute?.contains("staffDashboard") == true ||
-                navBackStackEntry?.arguments?.getString("entry") == "staff"
+                navBackStackEntry?.arguments?.getString("entry") == "staff" ||
+                savedStaffId != null // Eğer elimizde bir staffId varsa bu kişi personledir
     }
 
-    // Personel ID'sini sakla (Home'a dönerken lazım olacak)
-    val staffIdFromArgs = navBackStackEntry?.arguments?.getString("staffId")
 
-    // Merkezi Tab Geçiş Mantığı
+// staffId'yi her yakaladığımızda güncelleyelim
+    val staffIdFromArgs = navBackStackEntry?.arguments?.getString("staffId")
+    if (staffIdFromArgs != null) {
+        savedStaffId = staffIdFromArgs
+    }
     val navigateToTab: (AppTab) -> Unit = { tab ->
-        val targetRoute = when (tab.route) {
-            "staff_home" -> "staffDashboard/$staffIdFromArgs?entry=staff"
+        val targetRoute = when {
+            // DURUM 1: Kullanıcı Personel ve "Home" ikonuna (ister staff_home ister departments) basıyor
+            isUserStaff && (tab.route == "staff_home" || tab.route == Screen.Departments.route) -> {
+                "staffDashboard/$savedStaffId?entry=staff"
+            }
+
+            // DURUM 2: Kullanıcı Öğrenci ve "Home" ikonuna basıyor (zaten tab.route departments olacaktır)
+            !isUserStaff && tab.route == Screen.Departments.route -> {
+                Screen.Departments.route
+            }
+
+            // DİĞER DURUMLAR: Chat, Profile, Calendar vb.
             else -> tab.route
         }
 
@@ -88,7 +104,6 @@ fun StudentCenterNavHost(
             }
         }
     }
-
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route
@@ -251,7 +266,7 @@ fun StudentCenterNavHost(
             DepartmentListScreen(
                 state = state,
                 userName = userName,
-                currentRoute = currentRoute,
+                currentRoute = Screen.Departments.route,
                 onTabSelected = navigateToTab,
                 onDepartmentClick = { deptId, deptName ->
                     val handle = navController.currentBackStackEntry?.savedStateHandle
@@ -352,7 +367,7 @@ fun StudentCenterNavHost(
                 onBack = { navController.popBackStack() }
             )
         }
-        // --- Staff Dashboard (GÜNCELLENMİŞ) ---
+        // --- Staff Dashboard Bölümü ---
         composable(
             route = "staffDashboard/{staffId}?entry={entry}",
             arguments = listOf(
@@ -380,7 +395,7 @@ fun StudentCenterNavHost(
                 actionLoading = actionLoading,
                 actionError = actionError,
                 // Dashboard'dayken ikonun yeşil yanması için rotayı "staff_home" olarak simüle ediyoruz
-                currentRoute = if (currentRoute?.contains("staffDashboard") == true) "staff_home" else currentRoute,
+                currentRoute = "staff_home",
                 onTabSelected = navigateToTab,
                 onApprove = { vm.approve(it) },
                 onReject = { vm.reject(it) }
