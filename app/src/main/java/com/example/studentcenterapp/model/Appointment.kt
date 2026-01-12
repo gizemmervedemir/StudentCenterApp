@@ -10,5 +10,7 @@ data class Appointment(
     val timeSlotId: String,
     val appointmentDate: String = "", // Kolay sıralama ve görüntüleme için
     val type: String = "office", // Online mı ofis mi?
-    val status: String // "pending" | "approved" | "cancelled"
+    val status: String,// "pending" | "approved" | "cancelled",
+    val startTime: String = "",
+    val endTime: String = ""
 )

@@ -26,6 +26,24 @@ class AppointmentListViewModel(
         observeAppointments()
     }
 
+    private val _cancelSuccess = MutableStateFlow(false)
+    val cancelSuccess: StateFlow<Boolean> = _cancelSuccess.asStateFlow()
+
+    fun cancelAppointment(appointmentId: String) {
+        viewModelScope.launch {
+            try {
+                // Burası repository üzerinden Firestore'u tetikleyecek
+                appointmentRepository.cancelAppointment(appointmentId)
+                _cancelSuccess.value = true
+            } catch (e: Exception) {
+                // Hata yönetimi yapabilirsin
+            }
+        }
+    }
+
+    fun resetCancelSuccess() {
+        _cancelSuccess.value = false
+    }
     private fun observeAppointments() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 

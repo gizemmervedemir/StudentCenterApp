@@ -7,6 +7,7 @@ import com.example.studentcenterapp.model.Appointment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AppointmentDetailUiState(
@@ -22,6 +23,9 @@ class AppointmentDetailViewModel(
 
     private val _uiState = MutableStateFlow(AppointmentDetailUiState())
     val uiState: StateFlow<AppointmentDetailUiState> = _uiState.asStateFlow()
+
+    private val _cancelSuccess = MutableStateFlow(false)
+    val cancelSuccess: StateFlow<Boolean> = _cancelSuccess.asStateFlow()
 
     init {
         observeAppointment()
@@ -42,17 +46,41 @@ class AppointmentDetailViewModel(
             )
         }
     }
-
-    /**
-     * ✅ Cancel: repository status'u CANCELLED yapmalı (silmemeli)
-     */
+    // AppointmentDetailViewModel içindeki fonksiyon şu şekilde olmalı:
     fun cancelAppointment() {
         viewModelScope.launch {
-            val result = repository.cancelAppointment(appointmentId)
-            result.onFailure { e ->
-                _uiState.value = _uiState.value.copy(errorMessage = e.message ?: "Cancel failed")
-            }
-            // başarılıysa: datasource flow update edeceği için UI otomatik güncellenir (getById akışı varsa)
+            // Detay ViewModel'ında zaten appointmentId constructor'dan geliyor,
+            // o yüzden dışarıdan ID istemez.
+            repository.cancelAppointment(appointmentId)
+            // Burada da iptal sonrası bir state güncellemesi (cancelSuccess gibi) ekleyebilirsin.
         }
     }
+
+//    /**
+//     * ✅ Cancel: repository status'u CANCELLED yapmalı (silmemeli)
+//     */
+//    fun cancelAppointment() {
+//        viewModelScope.launch {
+//            _uiState.update { it.copy(isLoading = true) } // Yükleniyor durumuna sok
+//
+//            val result = repository.cancelAppointment(appointmentId)
+//
+//            result.onSuccess {
+//                _uiState.update { it.copy(isLoading = false) }
+//                _cancelSuccess.value = true // ✅ UI bu değişikliği görüp navigasyon yapacak
+//            }.onFailure { e ->
+//                _uiState.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        errorMessage = e.message ?: "İptal işlemi başarısız oldu."
+//                    )
+//                }
+//            }
+//        }
+//    }
+//
+//    // Navigasyon sonrası state'i sıfırlamak için
+//    fun resetCancelSuccess() {
+//        _cancelSuccess.value = false
+//    }
 }

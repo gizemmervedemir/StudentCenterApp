@@ -17,6 +17,8 @@ import com.example.studentcenterapp.ui.theme.PrimaryGreen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.studentcenterapp.R
+import com.example.studentcenterapp.navigation.Screen
+
 data class AppTab(
     val route: String,
     val iconRes: Int,
@@ -24,22 +26,22 @@ data class AppTab(
 )
 val bottomTabs = listOf(
     AppTab(
-        route = "home",
+        route = Screen.Departments.route,
         iconRes = R.drawable.material_symbols_home_rounded,
         contentDescription = "Home"
     ),
     AppTab(
-        route = "calendar",
+        route = Screen.StudentCalendar.route,
         iconRes = R.drawable.solar_calendar_bold,
         contentDescription = "Calendar"
     ),
     AppTab(
-        route = "chat",
+        route = Screen.StudentChat.route,
         iconRes = R.drawable.mynaui_message_solid,
         contentDescription = "Messages"
     ),
     AppTab(
-        route = "profile",
+        route = Screen.StudentProfile.route,
         iconRes = R.drawable.qlementine_icons_user_16,
         contentDescription = "Profile"
     )
