@@ -2,8 +2,8 @@ package com.example.studentcenterapp.viewmodel.appointment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.studentcenterapp.data.appointment.AppointmentRecord
 import com.example.studentcenterapp.data.appointment.AppointmentRepository
+import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.appointments.AppointmentListFilter
 import com.example.studentcenterapp.ui.appointments.AppointmentListUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +40,7 @@ class AppointmentListViewModel(
                         )
                     }
                 }
-                .collectLatest { list: List<AppointmentRecord> ->
+                .collectLatest { list: List<Appointment> ->
                     // ✅ Time alanı yok → UPCOMING/PAST ayrımı status ile
                     val upcoming = list
                         .filter { it.status.isUpcomingStatus() }

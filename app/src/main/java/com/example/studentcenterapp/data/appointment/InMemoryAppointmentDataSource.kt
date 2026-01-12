@@ -1,23 +1,21 @@
 package com.example.studentcenterapp.data.appointment
 
+import com.example.studentcenterapp.model.Appointment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.*
 
 class InMemoryAppointmentDataSource {
 
-    private val _appointments = MutableStateFlow<List<AppointmentRecord>>(emptyList())
-    val appointmentsFlow: StateFlow<List<AppointmentRecord>> = _appointments.asStateFlow()
+    private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
+    val appointmentsFlow: StateFlow<List<Appointment>> = _appointments.asStateFlow()
+
+    fun getAppointments(): StateFlow<List<Appointment>> = appointmentsFlow
 
     /**
-     * Repo bu flow'u kullanarak listeleri ve detail'i besler.
-     */
-    fun getAppointments(): StateFlow<List<AppointmentRecord>> = appointmentsFlow
-
-    /**
-     * ✅ Create — Confirm ekranı vs. için Result döndürüyoruz.
-     * (İstersen Result<Unit> yerine Result<AppointmentRecord> da yapabilirsin ama şimdilik Unit uyumlu.)
+     * ✅ Create — Yeni randevuyu senin Appointment modeline göre oluşturur.
      */
     suspend fun createAppointment(
         studentId: String,
@@ -25,13 +23,19 @@ class InMemoryAppointmentDataSource {
         timeSlotId: String,
         scheduledStartMillis: Long
     ): Result<Unit> {
-        val newItem = AppointmentRecord(
+        // Millis değerini modelindeki String 'appointmentDate' formatına çeviriyoruz
+        val sdf = SimpleDateFormat("dd MMMM, Eeee", Locale("tr"))
+        val formattedDate = sdf.format(Date(scheduledStartMillis))
+
+        val newItem = Appointment(
             id = UUID.randomUUID().toString(),
             studentId = studentId,
+            staffId = "", // Başlangıçta boş
             serviceId = serviceId,
             timeSlotId = timeSlotId,
-            scheduledStartMillis = scheduledStartMillis,
-            status = "PENDING"
+            appointmentDate = formattedDate, // Senin modelindeki alan
+            status = "pending",
+            type = "office"
         )
 
         _appointments.value = _appointments.value + newItem
@@ -39,33 +43,31 @@ class InMemoryAppointmentDataSource {
     }
 
     /**
-     * ✅ Cancel — appointment'ı silmeyelim; status'u CANCELLED yapalım.
-     * Böylece:
-     * - detail ekranında status güncellenir
-     * - listede de iptal olduğu görünür
+     * ✅ Cancel — Durumu "cancelled" olarak günceller.
      */
-    suspend fun cancelAppointment(appointmentId: String): Result<Unit> {
+    suspend fun updateStatus(appointmentId: String, newStatus: String): Boolean {
         val current = _appointments.value
         val index = current.indexOfFirst { it.id == appointmentId }
 
-        if (index == -1) {
-            return Result.failure(IllegalArgumentException("Appointment not found: $appointmentId"))
-        }
+        if (index == -1) return false
 
         val item = current[index]
-        val updated = item.copy(status = "CANCELLED")
+        val updated = item.copy(status = newStatus)
 
         val newList = current.toMutableList()
         newList[index] = updated
         _appointments.value = newList
 
-        return Result.success(Unit)
+        return true
     }
 
-    /**
-     * (Opsiyonel) Eğer gerçekten silmek istersen kullanırsın.
-     * Ama issue mantığında cancel = status update daha doğru.
-     */
+    // Geriye dönük uyumluluk için cancelAppointment
+    suspend fun cancelAppointment(appointmentId: String): Result<Unit> {
+        val success = updateStatus(appointmentId, "cancelled")
+        return if (success) Result.success(Unit)
+        else Result.failure(IllegalArgumentException("Appointment not found"))
+    }
+
     fun remove(appointmentId: String) {
         _appointments.value = _appointments.value.filterNot { it.id == appointmentId }
     }

@@ -1,6 +1,6 @@
 package com.example.studentcenterapp.ui.appointments
 
-import com.example.studentcenterapp.data.appointment.AppointmentRecord
+import com.example.studentcenterapp.model.Appointment
 
 enum class AppointmentListFilter {
     UPCOMING,
@@ -12,10 +12,10 @@ data class AppointmentListUiState(
     val errorMessage: String? = null,
     val selectedFilter: AppointmentListFilter = AppointmentListFilter.UPCOMING,
 
-    val upcomingAppointments: List<AppointmentRecord> = emptyList(),
-    val pastAppointments: List<AppointmentRecord> = emptyList()
+    val upcomingAppointments: List<Appointment> = emptyList(),
+    val pastAppointments: List<Appointment> = emptyList()
 ) {
-    val visibleAppointments: List<AppointmentRecord>
+    val visibleAppointments: List<Appointment>
         get() = if (selectedFilter == AppointmentListFilter.UPCOMING) {
             upcomingAppointments
         } else {

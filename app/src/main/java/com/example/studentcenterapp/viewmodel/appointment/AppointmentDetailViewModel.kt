@@ -2,8 +2,8 @@ package com.example.studentcenterapp.viewmodel.appointment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.studentcenterapp.data.appointment.AppointmentRecord
 import com.example.studentcenterapp.data.appointment.AppointmentRepository
+import com.example.studentcenterapp.model.Appointment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 data class AppointmentDetailUiState(
     val isLoading: Boolean = true,
-    val appointment: AppointmentRecord? = null,
+    val appointment: Appointment? = null,
     val errorMessage: String? = null
 )
 

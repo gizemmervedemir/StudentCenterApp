@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,23 +21,18 @@ import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.common.*
 import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.theme.PrimaryBlue
-import com.example.studentcenterapp.ui.common.EmptyStateConfig
-import com.example.studentcenterapp.ui.common.EmptyStateScreen
-import com.example.studentcenterapp.ui.common.LoadingView
-import com.example.studentcenterapp.ui.common.ErrorView
 
-
-
-private val GrayPanel = Color(0xFFE9E9E9)     // büyük gri zemin
-private val GrayCard  = Color(0xFFDADADA)     // list item kart gri
-private val ChipBlue  = Color(0xFF2EA7D8)     // sekme outline
-private val ChipFill  = Color(0xFFDFF3FB)     // seçili sekme dolu (açık mavi)
-
-private enum class StaffTab { ACTIVE, PENDING, CANCELLED, ALL }
+private val GrayPanel = Color(0xFFE9E9E9)
+private val GrayCard  = Color(0xFFDADADA)
+private val ChipBlue  = Color(0xFF2EA7D8)
+private val ChipFill  = Color(0xFFDFF3FB)
 
 @Composable
 fun StaffDashboardScreen(
     state: UiState<List<Appointment>>,
+    staffName: String, // ViewModel'den gelen isim
+    selectedFilter: String, // ViewModel'deki currentFilter
+    onFilterChanged: (String) -> Unit, // ViewModel'deki onFilterChanged
     actionLoading: Boolean,
     actionError: String?,
     currentRoute: String?,
@@ -46,8 +40,6 @@ fun StaffDashboardScreen(
     onApprove: (appointmentId: String) -> Unit,
     onReject: (appointmentId: String) -> Unit
 ) {
-    var selected by remember { mutableStateOf(StaffTab.PENDING) }
-
     Scaffold(
         topBar = { AppTopBar(title = "") },
         bottomBar = {
@@ -69,12 +61,12 @@ fun StaffDashboardScreen(
                     .fillMaxSize()
                     .padding(horizontal = 18.dp, vertical = 16.dp)
             ) {
-                // Header row (Merhaba + sağda avatar gri)
+                // Header row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Merhaba, Elif.", style = MaterialTheme.typography.titleLarge)
+                    Text("Merhaba, $staffName.", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.weight(1f))
                     Box(
                         Modifier
@@ -83,7 +75,6 @@ fun StaffDashboardScreen(
                     )
                 }
 
-                // Büyük gri panel (sekme + tarih + liste)
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -93,31 +84,35 @@ fun StaffDashboardScreen(
                 ) {
                     Column(Modifier.padding(12.dp)) {
 
-                        // 4'lü kutular (outline + seçili dolu)
+                        // Filtreleme Kutuları
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            SegBox("Aktif\nRandevular", selected == StaffTab.ACTIVE) { selected = StaffTab.ACTIVE }
-                            SegBox("Onay\nBekliyor", selected == StaffTab.PENDING, badge = true) { selected = StaffTab.PENDING }
-                            SegBox("İptal Edilen\nRandevular", selected == StaffTab.CANCELLED) { selected = StaffTab.CANCELLED }
-                            SegBox("Tüm\nRandevular", selected == StaffTab.ALL) { selected = StaffTab.ALL }
+                            val pendingCount = if (state is UiState.Success) {
+                                state.data.count { it.status == "pending" }
+                            } else 0
+
+                            SegBox("Aktif\nRandevular", selectedFilter == "approved") { onFilterChanged("approved") }
+                            SegBox("Onay\nBekliyor", selectedFilter == "pending", badgeCount = pendingCount) { onFilterChanged("pending") }
+                            SegBox("İptal Edilen\nRandevular", selectedFilter == "cancelled") { onFilterChanged("cancelled") }
+                            SegBox("Tüm\nRandevular", selectedFilter == "all") { onFilterChanged("all") }
                         }
 
-                        // Tarih satırı
+                        // Tarih Satırı (Statik kalsın veya dinamikleştirilebilir)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 10.dp, bottom = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = { /* prev day */ }) {
+                            IconButton(onClick = { }) {
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Prev")
                             }
                             Spacer(Modifier.weight(1f))
-                            Text("27 Ekim, Pazartesi", style = MaterialTheme.typography.titleMedium)
+                            Text("Bugün", style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.weight(1f))
-                            IconButton(onClick = { /* next day */ }) {
+                            IconButton(onClick = { }) {
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next")
                             }
                         }
@@ -131,63 +126,28 @@ fun StaffDashboardScreen(
                         }
 
                         when (state) {
-                            is UiState.Loading -> {
-                                LoadingView(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 30.dp)
-                                )
-                            }
-
-                            is UiState.Error -> {
-                                ErrorView(
-                                    message = state.message,
-                                    onRetry = null,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 18.dp)
-                                )
-                            }
-
+                            is UiState.Loading -> LoadingView(Modifier.fillMaxWidth().padding(vertical = 30.dp))
+                            is UiState.Error -> ErrorView(message = state.message, onRetry = null)
                             is UiState.Success -> {
-                                val all = state.data
-
-                                val filtered = when (selected) {
-                                    StaffTab.PENDING -> all.filter { it.status == "pending" }
-                                    StaffTab.ACTIVE -> all.filter { it.status == "approved" }
-                                    StaffTab.CANCELLED -> all.filter { it.status == "cancelled" }
-                                    StaffTab.ALL -> all
-                                }
-
-                                if (filtered.isEmpty()) {
-                                    val (title, message) = when (selected) {
-                                        StaffTab.PENDING -> "No pending appointments" to "There are no pending requests right now."
-                                        StaffTab.ACTIVE -> "No active appointments" to "There are no active appointments right now."
-                                        StaffTab.CANCELLED -> "No cancelled appointments" to "There are no cancelled appointments right now."
-                                        StaffTab.ALL -> "No appointments" to "There are no appointments to show."
-                                    }
-
+                                if (state.data.isEmpty()) {
                                     EmptyStateScreen(
                                         config = EmptyStateConfig(
-                                            title = title,
-                                            message = message
+                                            title = "Kayıt Bulunamadı",
+                                            message = "Bu kategoriye ait randevu bulunmamaktadır."
                                         ),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 18.dp)
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp)
                                     )
                                 } else {
                                     LazyColumn(
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        items(filtered, key = { it.id }) { appt ->
+                                        items(state.data, key = { it.id }) { appt ->
                                             StaffAppointmentCard(
-                                                name = appt.studentId,
-                                                time = appt.timeSlotId,
+                                                name = appt.studentId, // İleride studentName ile değiştirilebilir
+                                                time = appt.appointmentDate,
                                                 status = appt.status,
-                                                actionLoading = actionLoading,
-                                                showActions = (selected == StaffTab.PENDING),
+                                                showActions = (selectedFilter == "pending"),
                                                 onApprove = { onApprove(appt.id) },
                                                 onReject = { onReject(appt.id) }
                                             )
@@ -205,16 +165,16 @@ fun StaffDashboardScreen(
 }
 
 @Composable
-private fun SegBox(
+private fun RowScope.SegBox( // ✅ RowScope ekledik
     text: String,
     selected: Boolean,
-    badge: Boolean = false,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
-    Box {
+    Box(modifier = Modifier.weight(1f)) { // ✅ weight'i Box'a taşıdık
         Surface(
             modifier = Modifier
-                .width(86.dp)
+                .fillMaxWidth() // Genişliği Box'a yay
                 .height(46.dp)
                 .clickable(onClick = onClick),
             shape = RoundedCornerShape(12.dp),
@@ -222,20 +182,29 @@ private fun SegBox(
             border = BorderStroke(1.dp, ChipBlue)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(text = text, style = MaterialTheme.typography.labelSmall, color = ChipBlue, lineHeight = MaterialTheme.typography.labelSmall.lineHeight)
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ChipBlue,
+                    lineHeight = MaterialTheme.typography.labelSmall.lineHeight
+                )
             }
         }
 
-        if (badge) {
+        if (badgeCount > 0) {
             Box(
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(18.dp)
                     .align(Alignment.TopEnd)
-                    .offset(x = 6.dp, y = (-6).dp)
+                    .offset(x = 4.dp, y = (-4).dp)
                     .background(Color(0xFFE53935), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text("4", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    text = badgeCount.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }
@@ -246,7 +215,6 @@ private fun StaffAppointmentCard(
     name: String,
     time: String,
     status: String,
-    actionLoading: Boolean,
     showActions: Boolean,
     onApprove: () -> Unit,
     onReject: () -> Unit
@@ -256,23 +224,35 @@ private fun StaffAppointmentCard(
         shape = RoundedCornerShape(16.dp),
         color = GrayCard
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // sol avatar
-            Box(Modifier.size(38.dp).background(Color(0xFFBDBDBD), CircleShape))
-            Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(38.dp).background(Color(0xFFBDBDBD), CircleShape))
+                Spacer(Modifier.width(10.dp))
 
-            Column(Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium)
-                Text(time, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6A6A6A))
+                Column(Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium)
+                    Text(time, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6A6A6A))
+                }
+                StatusPill(status)
             }
 
-            StatusPill(status)
-
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Expand")
+            if (showActions) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onReject) {
+                        Text("Reddet", color = Color(0xFFE53935))
+                    }
+                    Button(
+                        onClick = onApprove,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF19B39A)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Onayla")
+                    }
+                }
+            }
         }
     }
 }
@@ -280,9 +260,9 @@ private fun StaffAppointmentCard(
 @Composable
 private fun StatusPill(status: String) {
     val (label, color) = when (status) {
-        "pending" -> "Onay" to Color(0xFF2EA7D8)
+        "pending" -> "Onay Bekliyor" to Color(0xFF2EA7D8)
         "approved" -> "Aktif" to Color(0xFF19B39A)
-        "cancelled" -> "İptal" to Color(0xFFE53935)
+        "cancelled" -> "İptal Edildi" to Color(0xFFE53935)
         else -> status to Color(0xFF2EA7D8)
     }
 
