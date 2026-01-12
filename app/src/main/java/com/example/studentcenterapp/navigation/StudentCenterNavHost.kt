@@ -98,13 +98,12 @@ fun StudentCenterNavHost(
         }
 
         composable(Screen.StaffSignup.route) {
-            val vm: StaffSignupViewModel = viewModel(
-                factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository)
-            )
+            val vm: StaffSignupViewModel = viewModel(factory = StaffSignupViewModelFactory(AppDI.staffAuthRepository))
             StaffSignupScreen(
                 vm = vm,
-                onSuccess = { staffId ->
-                    navController.navigate("staffDashboard/$staffId?entry=staff") {
+                onBackClick = { navController.popBackStack() },
+                onSuccess = {
+                    navController.navigate(Screen.SignupSuccess.route) {
                         popUpTo(Screen.StaffSignup.route) { inclusive = true }
                     }
                 }
