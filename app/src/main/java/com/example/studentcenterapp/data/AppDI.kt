@@ -8,6 +8,9 @@ import com.example.studentcenterapp.data.staff.*
 import com.example.studentcenterapp.data.student.*
 import com.example.studentcenterapp.data.appointment.*
 import com.example.studentcenterapp.data.chat.ChatRepository // Chat için gerekli import
+import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
+import com.example.studentcenterapp.data.timeslot.TimeSlotRepository
+import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.google.firebase.firestore.FirebaseFirestore
 
 object AppDI {
@@ -62,4 +65,47 @@ object AppDI {
     val staffAuthRepository: StaffAuthRepository by lazy {
         FirebaseAuthStaffAuthRepository()
     }
+
+    // 1. Paylaşılan Veri Kaynağı (Singleton)
+
+    val timeSlotDataSource: InMemoryDataSource by lazy {
+        InMemoryDataSource().apply {
+            seedTimeSlots(generateMockTimeSlots())
+        }
+    }
+
+    // 2. Repository Tanımı
+    val timeSlotRepository: TimeSlotRepository by lazy {
+        TimeSlotRepositoryImpl(timeSlotDataSource)
+    }
+
+    private fun generateMockTimeSlots(): List<com.example.studentcenterapp.model.TimeSlot> {
+        // Firestore'dan gelen gerçek ID'ler (Paylaştığın listedeki 'id' alanları)
+        val realServiceIds = listOf("101", "201", "301", "401", "501", "601", "701", "801")
+
+        val dates = listOf("2026-01-20", "2026-01-21", "2026-01-22")
+        val times = listOf("09:00", "10:00", "11:00", "14:00", "15:00", "16:00")
+
+        val slots = mutableListOf<com.example.studentcenterapp.model.TimeSlot>()
+        var idCounter = 1
+
+        realServiceIds.forEach { sId ->
+            dates.forEach { dStr ->
+                times.forEach { tStr ->
+                    slots.add(
+                        com.example.studentcenterapp.model.TimeSlot(
+                            id = "slot_${idCounter++}",
+                            serviceId = sId, // Burası artık "601", "401" vb. olacak
+                            date = dStr,
+                            startTime = tStr,
+                            endTime = "${tStr.split(":")[0].toInt() + 1}:00",
+                            isReserved = false
+                        )
+                    )
+                }
+            }
+        }
+        return slots
+    }
+
 }
