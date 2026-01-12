@@ -31,6 +31,8 @@ import com.example.studentcenterapp.ui.student.PasswordResetSuccessScreen
 import com.example.studentcenterapp.ui.chat.ChatListScreen
 import com.example.studentcenterapp.ui.chat.ChatDetailScreen
 import com.example.studentcenterapp.ui.common.AppTab
+import com.example.studentcenterapp.ui.common.studentBottomTabs
+import com.example.studentcenterapp.ui.common.staffBottomTabs
 
 private const val ARG_STUDENT_ID = "studentId"
 
@@ -55,15 +57,29 @@ fun StudentCenterNavHost(
     val timeSlotDataSource = remember { InMemoryDataSource() }
     val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
 
-    // ROTA TAKİBİ: Bottom Bar ikonlarının seçili gelmesini sağlar
+    // ROTA TAKİBİ
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // KULLANICI ROLÜNÜ TESPİT ET (Önemli: Personel mi Öğrenci mi?)
+    // Bu mantık, personel dashboard'dan başka sekmeye geçse bile rolü hatırlamasını sağlar.
+    val isUserStaff = remember(navBackStackEntry) {
+        currentRoute?.contains("staffDashboard") == true ||
+                navBackStackEntry?.arguments?.getString("entry") == "staff"
+    }
+
+    // Personel ID'sini sakla (Home'a dönerken lazım olacak)
+    val staffIdFromArgs = navBackStackEntry?.arguments?.getString("staffId")
+
     // Merkezi Tab Geçiş Mantığı
     val navigateToTab: (AppTab) -> Unit = { tab ->
-        if (currentRoute != tab.route) { // Zaten o sayfadaysak tekrar yükleme yapma
-            navController.navigate(tab.route) {
-                // Stack'i temizleyerek döngüsel crashleri önler
+        val targetRoute = when (tab.route) {
+            "staff_home" -> "staffDashboard/$staffIdFromArgs?entry=staff"
+            else -> tab.route
+        }
+
+        if (currentRoute != targetRoute && targetRoute.isNotEmpty()) {
+            navController.navigate(targetRoute) {
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
@@ -100,16 +116,14 @@ fun StudentCenterNavHost(
 
         // --- Staff Auth ---
         composable(Screen.StaffLogin.route) {
-            val vm: StaffLoginViewModel = viewModel(
-                factory = StaffLoginViewModelFactory(AppDI.staffAuthRepository)
-            )
+            val vm: StaffLoginViewModel = viewModel(factory = StaffLoginViewModelFactory(AppDI.staffAuthRepository))
             StaffLoginScreen(
                 vm = vm,
                 onSignupClick = { navController.navigate(Screen.StaffSignup.route) },
                 onForgotPasswordClick = { navController.navigate("forgotPasswordEmail/staff") },
                 onSuccess = { staffId ->
                     navController.navigate("staffDashboard/$staffId?entry=staff") {
-                        popUpTo(Screen.StaffLogin.route) { inclusive = true }
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }
             )
@@ -154,37 +168,6 @@ fun StudentCenterNavHost(
                 },
                 onBackClick = { navController.popBackStack() }
             )
-        }
-
-        // --- Common Success & Password Flow ---
-        composable("signupSuccess/{userType}") { backStackEntry ->
-            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
-            SignupSuccessScreen(onLoginClick = {
-                val target = if (userType == "staff") Screen.StaffLogin.route else Screen.StudentLogin.route
-                navController.navigate(target) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true }
-                }
-            })
-        }
-
-        composable("forgotPasswordEmail/{userType}") { backStackEntry ->
-            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
-            val vm: ForgotPasswordViewModel = viewModel()
-            ForgotPasswordEmailScreen(
-                viewModel = vm,
-                onCodeSent = { navController.navigate("passwordResetSuccess/$userType") },
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-
-        composable("passwordResetSuccess/{userType}") { backStackEntry ->
-            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
-            PasswordResetSuccessScreen(onLoginClick = {
-                val target = if (userType == "staff") Screen.StaffLogin.route else Screen.StudentLogin.route
-                navController.navigate(target) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true }
-                }
-            })
         }
 
         // --- Student Flow (Departments, Services, Appointments) ---
@@ -233,48 +216,18 @@ fun StudentCenterNavHost(
             )
         }
 
-        timeSlotGraph(navController = navController, timeSlotRepository = timeSlotRepository)
-
-        composable(Screen.Confirm.route) {
-            val prev = navController.previousBackStackEntry?.savedStateHandle
-            val studentId = prev?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID).orEmpty()
-            val departmentName = prev?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
-            val serviceId = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_ID).orEmpty()
-            val serviceName = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_NAME).orEmpty()
-            val timeSlotId = prev?.get<String>(ConfirmationNavKeys.KEY_TIMESLOT_ID).orEmpty()
-            val scheduledStartMillis = prev?.get<Long>(ConfirmationNavKeys.KEY_START_MILLIS) ?: 0L
-            val dateTimeText = prev?.get<String>(ConfirmationNavKeys.KEY_DATE_TEXT).orEmpty()
-            val appointmentType = prev?.get<String>("appointment_type") ?: "office"
-
-            AppointmentConfirmationScreen(
-                studentId = studentId,
-                departmentName = departmentName,
-                serviceId = serviceId,
-                serviceName = serviceName,
-                timeSlotId = timeSlotId,
-                scheduledStartMillis = scheduledStartMillis,
-                dateTimeText = dateTimeText,
-                factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
-                onBack = { navController.popBackStack() },
-                onSuccessNavigate = {
-                    navController.navigate(appointmentsRoute(studentId)) {
-                        popUpTo(Screen.Confirm.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // --- Chat Routes ---
+        // --- Chat Routes (Ortak Ekran Yönetimi) ---
         composable(route = Screen.Chat.route) {
-            // Alt barın bu rotayı tanıması için Screen.Chat.route'un
-            // AppTab.Chat içindeki rota ile aynı string olduğundan emin olun.
             ChatListScreen(
+                tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
                 currentRoute = currentRoute,
+                isStaff = isUserStaff, // EKSİK PARAMETRE EKLENDİ
                 onTabSelected = navigateToTab,
                 onChatClick = { id, name -> navController.navigate("chatDetail/$id/$name") },
                 onNewChatClick = { /* New chat logic */ }
             )
         }
+
         composable(
             route = "chatDetail/{chatId}/{chatName}",
             arguments = listOf(
@@ -286,6 +239,7 @@ fun StudentCenterNavHost(
             val chatName = backStackEntry.arguments?.getString("chatName").orEmpty()
 
             ChatDetailScreen(
+                tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
                 chatId = chatId,
                 chatTitle = chatName,
                 currentRoute = currentRoute,
@@ -294,7 +248,7 @@ fun StudentCenterNavHost(
             )
         }
 
-        // --- Appointment List & Detail ---
+        // --- Appointment List ---
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
             arguments = listOf(navArgument(ARG_STUDENT_ID) { type = NavType.StringType; defaultValue = "" })
@@ -312,18 +266,6 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(
-            route = Screen.AppointmentDetail.route,
-            arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val appointmentId = backStackEntry.arguments?.getString("appointmentId").orEmpty()
-            AppointmentDetailRoute(
-                appointmentId = appointmentId,
-                repository = AppDI.appointmentRepository,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         // --- Staff Dashboard ---
         composable(
             route = "staffDashboard/{staffId}?entry={entry}",
@@ -333,16 +275,6 @@ fun StudentCenterNavHost(
             )
         ) { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
-            val entry = backStackEntry.arguments?.getString("entry") ?: "staff"
-
-            if (staffId.isBlank() || entry != "staff") {
-                LaunchedEffect(Unit) {
-                    navController.navigate(Screen.Welcome.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-                return@composable
-            }
 
             val vm: StaffDashboardViewModel = viewModel(
                 factory = StaffDashboardViewModelFactory(staffId, AppDI.staffRepository)
@@ -361,11 +293,14 @@ fun StudentCenterNavHost(
                 onFilterChanged = { vm.onFilterChanged(it) },
                 actionLoading = actionLoading,
                 actionError = actionError,
-                currentRoute = currentRoute,
+                // Dashboard'dayken ikonun yeşil yanması için rotayı "staff_home" olarak simüle ediyoruz
+                currentRoute = if (currentRoute?.contains("staffDashboard") == true) "staff_home" else currentRoute,
                 onTabSelected = navigateToTab,
                 onApprove = { vm.approve(it) },
                 onReject = { vm.reject(it) }
             )
         }
+
+        // Diğer yardımcı rotalar (Success, Password Reset vb.) buraya eklenebilir...
     }
 }

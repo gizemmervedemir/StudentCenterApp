@@ -18,33 +18,31 @@ import com.example.studentcenterapp.ui.theme.PrimaryGreen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.studentcenterapp.R
+
+/**
+ * Bottom Bar üzerindeki her bir sekmeyi temsil eden veri modeli.
+ */
 data class AppTab(
     val route: String,
     val iconRes: Int,
     val contentDescription: String
 )
-val bottomTabs = listOf(
-    AppTab(
-        route = "departments",
-        iconRes = R.drawable.material_symbols_home_rounded,
-        contentDescription = "Home"
-    ),
-    AppTab(
-        route = "calendar",
-        iconRes = R.drawable.solar_calendar_bold,
-        contentDescription = "Calendar"
-    ),
-    AppTab(
-        route = "chat",
-        iconRes = R.drawable.mynaui_message_solid,
-        contentDescription = "Messages"
-    ),
-    AppTab(
-        route = "profile",
-        iconRes = R.drawable.qlementine_icons_user_16,
-        contentDescription = "Profile"
-    )
+
+/**
+ * Dinamik olarak tab listesi oluşturmak için yardımcı fonksiyon.
+ * Gereksiz kod tekrarını önler.
+ */
+private fun createTabs(homeRoute: String) = listOf(
+    AppTab(route = homeRoute, iconRes = R.drawable.material_symbols_home_rounded, contentDescription = "Home"),
+    AppTab(route = "calendar", iconRes = R.drawable.solar_calendar_bold, contentDescription = "Calendar"),
+    AppTab(route = "chat", iconRes = R.drawable.mynaui_message_solid, contentDescription = "Messages"),
+    AppTab(route = "profile", iconRes = R.drawable.qlementine_icons_user_16, contentDescription = "Profile")
 )
+
+// Mevcut NavHost yapını bozmamak için bu değişkenleri dışarıya açık bırakıyoruz
+val studentBottomTabs = createTabs(homeRoute = "departments")
+val staffBottomTabs = createTabs(homeRoute = "staff_home")
+
 @Composable
 fun AppBottomBar(
     tabs: List<AppTab>,
@@ -62,18 +60,24 @@ fun AppBottomBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEach { tab ->
-            // 1. ADIM: Seçili olma mantığını hem tam eşleşme hem de rota başlangıcı olarak kontrol et
-            // (Splash veya detay sayfalarından dönerken hata payını sıfırlar)
-            val isSelected = remember (currentRoute) {
-                currentRoute?.contains(tab.route, ignoreCase = true) == true
+            // Seçili olma kontrolü: Mevcut rota, tab rotasını içeriyor mu?
+            // "staffDashboard/123" rotası "staff_home" tetiklendiğinde Home'un yeşil kalmasını sağlar.
+            val isSelected = remember(currentRoute) {
+                if (currentRoute == null) return@remember false
+
+                // Özel durum: staff_home rotası Dashboard ile eşleşmeli
+                if (tab.route == "staff_home") {
+                    currentRoute.contains("staffDashboard", ignoreCase = true)
+                } else {
+                    currentRoute.contains(tab.route, ignoreCase = true)
+                }
             }
 
             IconButton(onClick = { onTabSelected(tab) }) {
                 Icon(
                     painter = painterResource(id = tab.iconRes),
                     contentDescription = tab.contentDescription,
-                    // 2. ADIM: Renklendirmeyi seçili duruma göre yap
-                    // Eğer seçiliyse PrimaryGreen (Yeşil), değilse Beyaz/Gri kalsın
+                    // Seçiliyse Yeşil (PrimaryGreen), değilse Beyaz
                     tint = if (isSelected) PrimaryGreen else Color.White
                 )
             }

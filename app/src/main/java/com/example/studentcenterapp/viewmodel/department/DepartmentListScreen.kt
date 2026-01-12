@@ -17,18 +17,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +43,7 @@ import com.example.studentcenterapp.ui.common.AppBottomBar
 import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.ContentCard
 import com.example.studentcenterapp.ui.common.AppTopBar
-import com.example.studentcenterapp.ui.common.bottomTabs
+import com.example.studentcenterapp.ui.common.studentBottomTabs
 import com.example.studentcenterapp.ui.theme.PrimaryBlue
 import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.theme.DarkText
@@ -70,7 +67,7 @@ fun DepartmentListScreen(
         topBar = { AppTopBar(title = "Departmanlar") },
         bottomBar = {
             AppBottomBar(
-                tabs = bottomTabs,
+                tabs = studentBottomTabs,
                 currentRoute = currentRoute,
                 onTabSelected = onTabSelected
             )
