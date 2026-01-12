@@ -32,6 +32,7 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.*
 import com.example.studentcenterapp.ui.appointment.AppointmentDetailRoute
 import com.example.studentcenterapp.ui.student.PasswordResetSuccessScreen
+
 private const val ARG_STUDENT_ID = "studentId"
 
 private fun appointmentsRoute(studentId: String): String {
@@ -202,10 +203,13 @@ fun StudentCenterNavHost(
                 state = state,
                 currentRoute = Screen.Services.route,
                 onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
-                onServiceClick = { serviceId, serviceName ->
+                onServiceClick = { serviceId, serviceName, type -> // type parametresi eklendi
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_ID, serviceId)
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
+                    // Seçilen randevu tipini SavedStateHandle'a kaydediyoruz
+                    handle?.set("appointment_type", type)
+
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 },
                 onBackClick = { navController.popBackStack() },
@@ -225,6 +229,9 @@ fun StudentCenterNavHost(
             val scheduledStartMillis = prev?.get<Long>(ConfirmationNavKeys.KEY_START_MILLIS) ?: 0L
             val dateTimeText = prev?.get<String>(ConfirmationNavKeys.KEY_DATE_TEXT).orEmpty()
 
+            // Kaydettiğimiz appointment_type bilgisini alıyoruz
+            val appointmentType = prev?.get<String>("appointment_type") ?: "office"
+
             AppointmentConfirmationScreen(
                 studentId = studentId,
                 departmentName = departmentName,
@@ -233,6 +240,8 @@ fun StudentCenterNavHost(
                 timeSlotId = timeSlotId,
                 scheduledStartMillis = scheduledStartMillis,
                 dateTimeText = dateTimeText,
+                // Onay ekranına bu bilgiyi de paslıyoruz (Gerekirse)
+                // appointmentType = appointmentType,
                 factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
                 onBack = { navController.popBackStack() },
                 onSuccessNavigate = {
@@ -269,13 +278,22 @@ fun StudentCenterNavHost(
         }
 
         // --- Staff Dashboard ---
-        composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
+        composable(
+            route = "staffDashboard/{staffId}?entry={entry}",
+            arguments = listOf(
+                navArgument("staffId") { type = NavType.StringType },
+                navArgument("entry") { type = NavType.StringType; defaultValue = "staff" }
+            )
+        ) { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
-            val entry = backStackEntry.arguments?.getString("entry").orEmpty()
+            val entry = backStackEntry.arguments?.getString("entry") ?: "staff"
 
+            // Yetkisiz erişim kontrolü
             if (staffId.isBlank() || entry != "staff") {
-                navController.navigate(Screen.Welcome.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                LaunchedEffect(Unit) {
+                    navController.navigate(Screen.Welcome.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
                 return@composable
             }
@@ -297,7 +315,7 @@ fun StudentCenterNavHost(
                 onFilterChanged = { vm.onFilterChanged(it) },
                 actionLoading = actionLoading,
                 actionError = actionError,
-                currentRoute = Screen.StaffDashboard.route,
+                currentRoute = "staffDashboard/{staffId}?entry={entry}", // BottomBar aktifliği için
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) { launchSingleTop = true }
                 },

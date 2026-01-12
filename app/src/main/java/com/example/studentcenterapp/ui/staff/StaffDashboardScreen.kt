@@ -1,281 +1,258 @@
 package com.example.studentcenterapp.ui.staff
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.example.studentcenterapp.R
 import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.common.*
 import com.example.studentcenterapp.ui.state.UiState
-import com.example.studentcenterapp.ui.theme.PrimaryBlue
-
-private val GrayPanel = Color(0xFFE9E9E9)
-private val GrayCard  = Color(0xFFDADADA)
-private val ChipBlue  = Color(0xFF2EA7D8)
-private val ChipFill  = Color(0xFFDFF3FB)
+import com.example.studentcenterapp.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun StaffDashboardScreen(
     state: UiState<List<Appointment>>,
-    staffName: String, // ViewModel'den gelen isim
-    selectedFilter: String, // ViewModel'deki currentFilter
-    onFilterChanged: (String) -> Unit, // ViewModel'deki onFilterChanged
+    staffName: String,
+    selectedFilter: String,
+    onFilterChanged: (String) -> Unit,
     actionLoading: Boolean,
     actionError: String?,
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
-    onApprove: (appointmentId: String) -> Unit,
-    onReject: (appointmentId: String) -> Unit
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
 ) {
+    val selectedDate = remember { mutableStateOf(LocalDate.now()) }
+    val showHistoryDialog = remember { mutableStateOf(false) }
+    val selectedApptForHistory = remember { mutableStateOf<Appointment?>(null) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("d MMMM, EEEE", Locale("tr")) }
+
     Scaffold(
-        topBar = { AppTopBar(title = "") },
+        topBar = {
+            Box(
+                modifier = Modifier.fillMaxWidth().background(PrimaryBlue).padding(top = 16.dp, bottom = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(painter = painterResource(id = R.drawable.logo_oldx), contentDescription = null, modifier = Modifier.size(60.dp, 40.dp))
+            }
+        },
         bottomBar = {
-            AppBottomBar(
-                tabs = bottomTabs,
-                currentRoute = currentRoute,
-                onTabSelected = onTabSelected
-            )
+            AppBottomBar(tabs = bottomTabs, currentRoute = currentRoute, onTabSelected = onTabSelected)
         },
         containerColor = PrimaryBlue
     ) { padding ->
-        ContentCard(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 18.dp, vertical = 16.dp)
-            ) {
-                // Header row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Merhaba, $staffName.", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.weight(1f))
-                    Box(
-                        Modifier
-                            .size(36.dp)
-                            .background(Color(0xFFD0D0D0), CircleShape)
-                    )
-                }
+        Column(modifier = Modifier.padding(padding)) {
+            Text(
+                text = "Merhaba, $staffName.",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            )
 
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 14.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    color = GrayPanel
-                ) {
-                    Column(Modifier.padding(12.dp)) {
+            ContentCard(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
 
-                        // Filtreleme Kutuları
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            val pendingCount = if (state is UiState.Success) {
-                                state.data.count { it.status == "pending" }
-                            } else 0
+                    val pendingCount = if (state is UiState.Success) {
+                        state.data.count { it.status == "pending" }
+                    } else 0
 
-                            SegBox("Aktif\nRandevular", selectedFilter == "approved") { onFilterChanged("approved") }
-                            SegBox("Onay\nBekliyor", selectedFilter == "pending", badgeCount = pendingCount) { onFilterChanged("pending") }
-                            SegBox("İptal Edilen\nRandevular", selectedFilter == "cancelled") { onFilterChanged("cancelled") }
-                            SegBox("Tüm\nRandevular", selectedFilter == "all") { onFilterChanged("all") }
+                    StaffFilterRow(selectedFilterId = selectedFilter, pendingCount = pendingCount, onSelect = onFilterChanged)
+
+                    // --- TARİH SEÇİCİ ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { selectedDate.value = selectedDate.value.minusDays(1) }) {
+                            Icon(Icons.Default.ChevronLeft, "Geri", modifier = Modifier.size(28.dp))
                         }
-
-                        // Tarih Satırı (Statik kalsın veya dinamikleştirilebilir)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp, bottom = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { }) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Prev")
-                            }
-                            Spacer(Modifier.weight(1f))
-                            Text("Bugün", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.weight(1f))
-                            IconButton(onClick = { }) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next")
-                            }
+                        Text(
+                            text = selectedDate.value.format(dateFormatter),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            textAlign = TextAlign.Center
+                        )
+                        IconButton(onClick = { selectedDate.value = selectedDate.value.plusDays(1) }) {
+                            Icon(Icons.Default.ChevronRight, "İleri", modifier = Modifier.size(28.dp))
                         }
+                    }
 
-                        if (!actionError.isNullOrBlank()) {
-                            Text(
-                                text = actionError,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-
-                        when (state) {
-                            is UiState.Loading -> LoadingView(Modifier.fillMaxWidth().padding(vertical = 30.dp))
-                            is UiState.Error -> ErrorView(message = state.message, onRetry = null)
-                            is UiState.Success -> {
-                                if (state.data.isEmpty()) {
-                                    EmptyStateScreen(
-                                        config = EmptyStateConfig(
-                                            title = "Kayıt Bulunamadı",
-                                            message = "Bu kategoriye ait randevu bulunmamaktadır."
-                                        ),
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp)
-                                    )
-                                } else {
-                                    LazyColumn(
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        items(state.data, key = { it.id }) { appt ->
-                                            StaffAppointmentCard(
-                                                name = appt.studentId, // İleride studentName ile değiştirilebilir
-                                                time = appt.appointmentDate,
-                                                status = appt.status,
-                                                showActions = (selectedFilter == "pending"),
-                                                onApprove = { onApprove(appt.id) },
-                                                onReject = { onReject(appt.id) }
-                                            )
-                                        }
-                                        item { Spacer(Modifier.height(8.dp)) }
+                    when (state) {
+                        is UiState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = PrimaryBlue) }
+                        is UiState.Success -> {
+                            if (state.data.isEmpty()) {
+                                EmptyStateScreen(config = EmptyStateConfig("Kayıt Bulunamadı", "Görünecek randevu yok."))
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(state.data) { appt ->
+                                        StaffAppointmentCard(
+                                            appointment = appt,
+                                            onApprove = { onApprove(appt.id) },
+                                            onReject = { onReject(appt.id) },
+                                            onShowHistory = {
+                                                selectedApptForHistory.value = appt
+                                                showHistoryDialog.value = true
+                                            }
+                                        )
                                     }
+                                    item { Spacer(modifier = Modifier.height(20.dp)) }
                                 }
                             }
                         }
+                        is UiState.Error -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text(state.message, color = Color.Red) }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-private fun RowScope.SegBox( // ✅ RowScope ekledik
-    text: String,
-    selected: Boolean,
-    badgeCount: Int = 0,
-    onClick: () -> Unit
-) {
-    Box(modifier = Modifier.weight(1f)) { // ✅ weight'i Box'a taşıdık
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth() // Genişliği Box'a yay
-                .height(46.dp)
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(12.dp),
-            color = if (selected) ChipFill else Color.Transparent,
-            border = BorderStroke(1.dp, ChipBlue)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = ChipBlue,
-                    lineHeight = MaterialTheme.typography.labelSmall.lineHeight
-                )
-            }
-        }
-
-        if (badgeCount > 0) {
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 4.dp, y = (-4).dp)
-                    .background(Color(0xFFE53935), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = badgeCount.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StaffAppointmentCard(
-    name: String,
-    time: String,
-    status: String,
-    showActions: Boolean,
-    onApprove: () -> Unit,
-    onReject: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = GrayCard
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(38.dp).background(Color(0xFFBDBDBD), CircleShape))
-                Spacer(Modifier.width(10.dp))
-
-                Column(Modifier.weight(1f)) {
-                    Text(name, style = MaterialTheme.typography.titleMedium)
-                    Text(time, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6A6A6A))
-                }
-                StatusPill(status)
-            }
-
-            if (showActions) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onReject) {
-                        Text("Reddet", color = Color(0xFFE53935))
-                    }
-                    Button(
-                        onClick = onApprove,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF19B39A)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Onayla")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusPill(status: String) {
-    val (label, color) = when (status) {
-        "pending" -> "Onay Bekliyor" to Color(0xFF2EA7D8)
-        "approved" -> "Aktif" to Color(0xFF19B39A)
-        "cancelled" -> "İptal Edildi" to Color(0xFFE53935)
-        else -> status to Color(0xFF2EA7D8)
-    }
-
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = Color.Transparent,
-        border = BorderStroke(1.dp, color)
-    ) {
-        Text(
-            text = label,
-            color = color,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+    if (showHistoryDialog.value && selectedApptForHistory.value != null) {
+        AppointmentHistoryDialog(
+            appointment = selectedApptForHistory.value!!,
+            onDismiss = { showHistoryDialog.value = false }
         )
+    }
+}
+
+@Composable
+fun StaffAppointmentCard(
+    appointment: Appointment,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    onShowHistory: () -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F2F2))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AccountCircle, null, Modifier.size(45.dp), Color.Gray)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = appointment.studentName, style = MaterialTheme.typography.titleSmall, color = DarkText)
+                    Text(text = appointment.appointmentDate, style = MaterialTheme.typography.bodySmall, color = lightText)
+                }
+
+                StatusBadge(status = appointment.status)
+                Icon(imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
+            }
+
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(top = 16.dp, start = 57.dp)) {
+                    // Figma'daki Sade Tasarım: Sadece Öğrenci No ve Son Randevu Bilgisi
+                    DetailInfoItem(icon = Icons.Default.Badge, text = appointment.studentId)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    DetailInfoItem(icon = Icons.Default.CalendarToday, text = "Son Randevu Tarihi: --")
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                        if (appointment.status == "pending") {
+                            IconButton(onClick = onApprove) { Icon(Icons.Default.CheckCircle, null, Modifier.size(32.dp), Color(0xFF48C9B0)) }
+                            IconButton(onClick = onReject) { Icon(Icons.Default.Cancel, null, Modifier.size(32.dp), Color.Red) }
+                        }
+
+                        Button(
+                            onClick = onShowHistory,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Text("Randevu Geçmişi", fontSize = 10.sp, color = Color.White)
+                        }
+
+                        if (appointment.status != "pending") {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(onClick = { }) { Icon(Icons.Default.Chat, null, tint = Color.Gray) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppointmentHistoryDialog(
+    appointment: Appointment,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(28.dp), color = Color(0xFFF2F2F2)) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountCircle, null, Modifier.size(48.dp), Color.Gray)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = appointment.studentName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(text = appointment.studentId, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.History, null, Modifier.size(18.dp), Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Randevu Hareketleri", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+
+                Text(text = "Daha önce randevu kaydı bulunmamaktadır.", fontSize = 12.sp, color = Color.DarkGray)
+
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Kapat", color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailInfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(16.dp), Color.Gray)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = text, fontSize = 12.sp, color = Color.DarkGray)
+    }
+}
+
+@Composable
+fun StatusBadge(status: String) {
+    val (label, color) = when (status) {
+        "approved" -> "Aktif" to Color(0xFF48C9B0)
+        "pending" -> "Onay" to Color(0xFFFF7043)
+        "cancelled" -> "İptal" to Color(0xFFE91E63)
+        else -> "Bilinmiyor" to Color.Gray
+    }
+    Surface(color = color, shape = RoundedCornerShape(12.dp)) {
+        Text(text = label, color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
     }
 }
