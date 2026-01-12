@@ -23,42 +23,38 @@ import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.AppTopBar
 import com.example.studentcenterapp.ui.common.ErrorView
 import com.example.studentcenterapp.ui.common.LoadingView
-import com.example.studentcenterapp.ui.common.bottomTabs
+import com.example.studentcenterapp.ui.common.studentBottomTabs // Güncellenen import
 import com.example.studentcenterapp.viewmodel.appointment.AppointmentListViewModel
 import com.example.studentcenterapp.viewmodel.appointment.AppointmentListViewModelFactory
 
 @Composable
 fun AppointmentListScreen(
     factory: AppointmentListViewModelFactory,
-    currentRoute: String?,            // NavHost'tan gelen rota bilgisi
-    onTabSelected: (AppTab) -> Unit,   // Alt bar tıklama yönetimi
+    currentRoute: String?,
+    onTabSelected: (AppTab) -> Unit,
     onAppointmentClick: (appointmentId: String) -> Unit
 ) {
     val vm: AppointmentListViewModel = viewModel(factory = factory)
     val state by vm.uiState.collectAsState()
 
-    // Scaffold kullanımı alt barın (bottomBar) ekranın en altında sabit kalmasını sağlar
     Scaffold(
         bottomBar = {
             AppBottomBar(
-                tabs = bottomTabs,
+                tabs = studentBottomTabs, // Güncellenen kısım: Artık studentBottomTabs kullanılıyor
                 currentRoute = currentRoute,
                 onTabSelected = onTabSelected
             )
         },
-        containerColor = Color(0xFF4FC3F7) // Üstteki mavi alanın rengi
+        containerColor = Color(0xFF4FC3F7)
     ) { paddingValues ->
-        // paddingValues, Scaffold'ın alt bar için ayırdığı boşluğu Column'a uygular
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color(0xFF4FC3F7))
         ) {
-            // Figma Tasarımı: Üst bar (VA logosu vb.)
             AppTopBar(title = "")
 
-            // Figma Tasarımı: Beyaz, üst köşeleri yuvarlatılmış ana gövde
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.White,
@@ -78,7 +74,6 @@ fun AppointmentListScreen(
                         modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
                     )
 
-                    // Yaklaşan / Geçmiş filtresi
                     FilterRow(
                         selected = state.selectedFilter,
                         onUpcoming = { vm.setFilter(AppointmentListFilter.UPCOMING) },
@@ -87,7 +82,6 @@ fun AppointmentListScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Liste veya Durum Görünümleri
                     when {
                         state.isLoading -> LoadingView(modifier = Modifier.fillMaxWidth())
                         state.errorMessage != null -> ErrorView(

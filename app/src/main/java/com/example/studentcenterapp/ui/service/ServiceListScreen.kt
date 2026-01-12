@@ -24,6 +24,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.studentcenterapp.R
 import com.example.studentcenterapp.model.Service
 import com.example.studentcenterapp.ui.common.*
+import com.example.studentcenterapp.ui.common.studentBottomTabs // Eksik olan spesifik import
 import com.example.studentcenterapp.ui.state.UiState
 import com.example.studentcenterapp.ui.theme.DarkText
 import com.example.studentcenterapp.ui.theme.Figtree
@@ -47,7 +48,12 @@ fun ServiceListScreen(
     Scaffold(
         topBar = { AppTopBar(title = "") },
         bottomBar = {
-            AppBottomBar(tabs = bottomTabs, currentRoute = currentRoute, onTabSelected = onTabSelected)
+            // bottomTabs yerine studentBottomTabs kullanıldı
+            AppBottomBar(
+                tabs = studentBottomTabs,
+                currentRoute = currentRoute,
+                onTabSelected = onTabSelected
+            )
         },
         containerColor = PrimaryBlue
     ) { innerPadding ->
@@ -130,7 +136,6 @@ fun ServiceListScreen(
     }
 
     if (showTypeSelection) {
-        // onDismissRequest içindeki uyarıyı gidermek için if kontrolü eklendi
         Dialog(onDismissRequest = { if (showTypeSelection) showTypeSelection = false }) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
@@ -188,7 +193,7 @@ fun ServiceListScreen(
     }
 }
 
-private fun ColumnScope.getDrawableResource(imageName: String?): Int {
+private fun getDrawableResource(imageName: String?): Int {
     return when (imageName) {
         "ic_gelisim" -> R.drawable.ic_gelisim
         "ic_burs" -> R.drawable.ic_burs
