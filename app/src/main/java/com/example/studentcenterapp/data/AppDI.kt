@@ -19,19 +19,27 @@ import com.example.studentcenterapp.data.student.StudentRepositoryImpl
 import com.example.studentcenterapp.data.appointment.AppointmentRepository
 import com.example.studentcenterapp.data.appointment.AppointmentRepositoryImpl
 import com.example.studentcenterapp.data.appointment.InMemoryAppointmentDataSource
+import com.example.studentcenterapp.data.department.DepartmentDataSource
+import com.example.studentcenterapp.data.department.FirestoreDepartmentDataSource
+import com.example.studentcenterapp.data.service.FirestoreServiceDataSource
+import com.example.studentcenterapp.data.service.ServiceDataSource
 
 object AppDI {
 
+    private val departmentDataSource: DepartmentDataSource = FirestoreDepartmentDataSource()
+    private val serviceDataSource: ServiceDataSource = FirestoreServiceDataSource()
+
+    // 2. Orta katman: Repository (DataSource'u içine alıyor)
     val departmentRepository: DepartmentRepository by lazy {
-        DepartmentRepositoryImpl(InMemoryDepartmentDataSource())
+        DepartmentRepositoryImpl(departmentDataSource)
+    }
+
+    val serviceRepository: ServiceRepository by lazy {
+        ServiceRepositoryImpl(serviceDataSource)
     }
 
     val studentRepository: StudentRepository by lazy {
         StudentRepositoryImpl(InMemoryStudentDataSource())
-    }
-
-    val serviceRepository: ServiceRepository by lazy {
-        ServiceRepositoryImpl(InMemoryServiceDataSource())
     }
 
     val staffRepository: StaffRepository by lazy {

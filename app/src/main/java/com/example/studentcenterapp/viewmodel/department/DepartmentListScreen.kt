@@ -55,6 +55,7 @@ import com.example.studentcenterapp.ui.theme.lightText
 fun DepartmentListScreen(
     state: UiState<List<Department>>,
     currentRoute: String?,
+    userName: String,
     onTabSelected: (AppTab) -> Unit,
     onDepartmentClick: (departmentId: String, departmentName: String) -> Unit
 
@@ -78,6 +79,7 @@ fun DepartmentListScreen(
             ContentCard(modifier = Modifier.fillMaxSize()) {
                 DepartmentListContent(
                     state = state,
+                    userName= userName,
                     onDepartmentClick = onDepartmentClick
                 )
             }
@@ -89,6 +91,7 @@ fun DepartmentListScreen(
 @Composable
 private fun DepartmentListContent(
     state: UiState<List<Department>>,
+    userName: String,
     onDepartmentClick:(departmentId: String, departmentName: String) -> Unit
 ) {
     // 8 birimlik liste (state.data içinden gelecek)
@@ -101,7 +104,7 @@ private fun DepartmentListContent(
         Spacer(modifier = Modifier.height(26.dp)) // Tepeden Merhaba Deniz'e kadar 26
 
         Text(
-            text = "Merhaba, Deniz.",
+            text = "Merhaba, $userName.",
             style = TextStyle(
                 fontFamily = Figtree,
                 fontWeight = FontWeight.Bold,
@@ -161,10 +164,10 @@ private fun DepartmentListContent(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(state.data) { dep ->
+                        items(state.data, key = { it.id }) { dep ->
                             DepartmentRow(
-                                title = dep.name,
-                                isSelected = dep.name.contains("Psikolojik"),
+                                title = dep.name.ifBlank { "İSİM EKSİK (ID: ${dep.id})" },
+                                isSelected = dep.name.contains("Bireysel"),
                                 onClick = {onDepartmentClick(dep.id, dep.name)}
                             )
                         }

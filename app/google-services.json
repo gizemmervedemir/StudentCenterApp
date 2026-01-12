@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "483319693822",
+    "project_id": "studentcenterapp-2494b",
+    "storage_bucket": "studentcenterapp-2494b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483319693822:android:625353a87db954baa200af",
+        "android_client_info": {
+          "package_name": "com.example.studentcenterapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCI7tpswErRTBes_90cFdvOcRHHKH32Ds4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

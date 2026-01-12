@@ -45,49 +45,59 @@ class ForgotPasswordViewModel : ViewModel() {
 
         viewModelScope.launch {
             isLoading = true
-            // Burada Backend/Firebase isteği yapılacak
-            // Şimdilik simüle ediyoruz:
-            kotlinx.coroutines.delay(1000)
-            isLoading = false
-            onSuccess()
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+
+            // Firebase şifre sıfırlama mailini gönderir
+            auth.sendPasswordResetEmail(email)
+                .addOnSuccessListener {
+                    isLoading = false
+                    // Mail başarıyla gitti!
+                    // Burada kullanıcıya "Mailinizi kontrol edin" mesajı gösterip
+                    // Success ekranına veya Login'e yönlendirebiliriz.
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    isLoading = false
+                    errorMessage = "Hata: ${e.localizedMessage}"
+                }
         }
     }
 
-    // Kodu Doğrula (2. Ekran)
-    fun verifyCode(onSuccess: () -> Unit) {
-        codeError = false
-        val fullCode = code1 + code2 + code3 + code4
-
-        if (fullCode.length < 4) {
-            codeError = true
-            errorMessage = "Lütfen 4 haneli kodu eksiksiz giriniz."
-            return
-        }
-
-        viewModelScope.launch {
-            isLoading = true
-            // Kod doğrulama isteği...
-            isLoading = false
-            onSuccess()
-        }
-    }
-
-    // Şifreyi Güncelle (3. Ekran)
-    fun updatePassword(onSuccess: () -> Unit) {
-        passwordError = false
-        errorMessage = null
-
-        if (newPassword.length < 6 || newPassword != confirmPassword) {
-            passwordError = true
-            errorMessage = if (newPassword.length < 6) "Şifre en az 6 karakter olmalıdır." else "Şifreler uyuşmuyor."
-            return
-        }
-
-        viewModelScope.launch {
-            isLoading = true
-            // Şifre güncelleme isteği...
-            isLoading = false
-            onSuccess()
-        }
-    }
+//    // Kodu Doğrula (2. Ekran)
+//    fun verifyCode(onSuccess: () -> Unit) {
+//        codeError = false
+//        val fullCode = code1 + code2 + code3 + code4
+//
+//        if (fullCode.length < 4) {
+//            codeError = true
+//            errorMessage = "Lütfen 4 haneli kodu eksiksiz giriniz."
+//            return
+//        }
+//
+//        viewModelScope.launch {
+//            isLoading = true
+//            // Kod doğrulama isteği...
+//            isLoading = false
+//            onSuccess()
+//        }
+//    }
+//
+//    // Şifreyi Güncelle (3. Ekran)
+//    fun updatePassword(onSuccess: () -> Unit) {
+//        passwordError = false
+//        errorMessage = null
+//
+//        if (newPassword.length < 6 || newPassword != confirmPassword) {
+//            passwordError = true
+//            errorMessage = if (newPassword.length < 6) "Şifre en az 6 karakter olmalıdır." else "Şifreler uyuşmuyor."
+//            return
+//        }
+//
+//        viewModelScope.launch {
+//            isLoading = true
+//            // Şifre güncelleme isteği...
+//            isLoading = false
+//            onSuccess()
+//        }
+//    }
 }

@@ -18,19 +18,28 @@ class StudentLoginViewModel(private val repository: StudentRepository) : ViewMod
     var isLoading by mutableStateOf(false)
 
     fun onLoginClick(onSuccess: () -> Unit) {
-        errorMessage = null // Her tıklamada hatayı sıfırla
+        errorMessage = null
+        if (email.isBlank() || password.isBlank()) {
+            errorMessage = "Lütfen tüm alanları doldurun."
+            return
+        }
 
         viewModelScope.launch {
             isLoading = true
-            val result = repository.login(email, password)
-            isLoading = false
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
 
-            result.onSuccess {
-                StudentSession.currentStudentId = email.trim()
-                onSuccess()
-            }.onFailure {
-                errorMessage = "E-posta/Şifre uyuşmuyor"
-            }
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener { authResult ->
+                    isLoading = false
+                    // Firebase'in verdiği benzersiz User ID'yi (UID) session'a kaydediyoruz
+                    val userId = authResult.user?.uid ?: ""
+                    com.example.studentcenterapp.data.student.StudentSession.currentStudentId = userId
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    isLoading = false
+                    errorMessage = "Giriş başarısız: E-posta veya şifre hatalı."
+                }
         }
     }
     companion object {
