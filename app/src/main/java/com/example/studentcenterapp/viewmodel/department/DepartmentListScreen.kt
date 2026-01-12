@@ -30,6 +30,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,6 +64,8 @@ fun DepartmentListScreen(
     onDepartmentClick: (departmentId: String, departmentName: String) -> Unit
 
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     Scaffold(
         topBar = { AppTopBar(title = "Departmanlar") },
         bottomBar = {
@@ -80,6 +86,8 @@ fun DepartmentListScreen(
                 DepartmentListContent(
                     state = state,
                     userName= userName,
+                    searchQuery = searchQuery,
+                    onSearchChange = { searchQuery = it },
                     onDepartmentClick = onDepartmentClick
                 )
             }
@@ -92,6 +100,8 @@ fun DepartmentListScreen(
 private fun DepartmentListContent(
     state: UiState<List<Department>>,
     userName: String,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
     onDepartmentClick:(departmentId: String, departmentName: String) -> Unit
 ) {
     // 8 birimlik liste (state.data içinden gelecek)
@@ -117,8 +127,8 @@ private fun DepartmentListContent(
 
         // Birimleri Ara (Arama Çubuğu)
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = onSearchChange,
             modifier = Modifier
                 .fillMaxWidth() // Yatayda kartı ortalar
                 .height(59.dp), // Dikey uzunluğu 59 (Figma'dan)
@@ -159,17 +169,29 @@ private fun DepartmentListContent(
             when (state) {
                 is UiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 is UiState.Success -> {
-                    // LazyColumn otomatik olarak kaydırma sağlar
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(state.data, key = { it.id }) { dep ->
-                            DepartmentRow(
-                                title = dep.name.ifBlank { "İSİM EKSİK (ID: ${dep.id})" },
-                                isSelected = dep.name.contains("Bireysel"),
-                                onClick = {onDepartmentClick(dep.id, dep.name)}
-                            )
+                    // FİLTRELEME MANTIĞI:
+                    val filteredList = state.data.filter {
+                        it.name.contains(searchQuery, ignoreCase = true)
+                    }
+
+                    if (filteredList.isEmpty()) {
+                        Text(
+                            "Sonuç bulunamadı",
+                            modifier = Modifier.align(Alignment.Center),
+                            color = lightText
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(filteredList, key = { it.id }) { dep ->
+                                DepartmentRow(
+                                    title = dep.name.ifBlank { "İSİM EKSİK (ID: ${dep.id})" },
+                                    isSelected = false, // Veya kendi mantığını ekleyebilirsin
+                                    onClick = { onDepartmentClick(dep.id, dep.name) }
+                                )
+                            }
                         }
                     }
                 }
