@@ -2,7 +2,6 @@ package com.example.studentcenterapp.ui.staffauth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -27,6 +26,7 @@ import com.example.studentcenterapp.ui.theme.*
 fun StaffLoginScreen(
     vm: StaffLoginViewModel,
     onSignupClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
     onSuccess: (staffId: String) -> Unit
 ) {
     val email by vm.email.collectAsState()
@@ -34,9 +34,8 @@ fun StaffLoginScreen(
     val state by vm.uiState.collectAsState()
     val navStaffId by vm.navStaffId.collectAsState()
 
-    // Başarılı giriş kontrolü
-    if (navStaffId != null) {
-        val id = navStaffId!!
+    // Başarılı giriş durumunda yönlendirme tetikleyici
+    navStaffId?.let { id ->
         vm.consumeNav()
         onSuccess(id)
     }
@@ -50,7 +49,7 @@ fun StaffLoginScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo Alanı (StudentLoginScreen ile aynı ölçülerde)
+            // Logo Alanı
             Spacer(modifier = Modifier.height(83.dp))
             Image(
                 painter = painterResource(id = R.drawable.logo_oldx),
@@ -62,7 +61,7 @@ fun StaffLoginScreen(
             )
             Spacer(modifier = Modifier.height(27.dp))
 
-            // Beyaz Kart (ContentCard)
+            // Beyaz Giriş Kartı
             ContentCard(
                 modifier = Modifier
                     .fillMaxSize()
@@ -75,14 +74,14 @@ fun StaffLoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Giriş Yapın",
+                        text = "Personel Girişi",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.align(Alignment.Start)
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // E-posta Input
+                    // E-posta Alanı
                     OutlinedTextField(
                         value = email,
                         onValueChange = vm::onEmailChange,
@@ -109,7 +108,7 @@ fun StaffLoginScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Şifre Input
+                    // Şifre Alanı
                     OutlinedTextField(
                         value = password,
                         onValueChange = vm::onPasswordChange,
@@ -135,7 +134,7 @@ fun StaffLoginScreen(
                         )
                     )
 
-                    // Hata Mesajı ve Şifremi Unuttum Satırı
+                    // Hata ve Şifremi Unuttum Satırı
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -154,7 +153,7 @@ fun StaffLoginScreen(
                         }
 
                         TextButton(
-                            onClick = { /* Opsiyonel: Şifremi Unuttum Logic */ },
+                            onClick = onForgotPasswordClick,
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(
@@ -176,7 +175,11 @@ fun StaffLoginScreen(
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "Hesabınız yok mu?", color = lightText, style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        text = "Hesabınız yok mu?",
+                        color = lightText,
+                        style = MaterialTheme.typography.labelMedium
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
 
                     // Üye Ol Butonu (Yeşil)

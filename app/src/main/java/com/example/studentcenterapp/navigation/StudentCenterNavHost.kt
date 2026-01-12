@@ -1,18 +1,14 @@
 package com.example.studentcenterapp.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
@@ -32,6 +28,12 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.*
 import com.example.studentcenterapp.ui.appointment.AppointmentDetailRoute
 import com.example.studentcenterapp.ui.student.PasswordResetSuccessScreen
+import com.example.studentcenterapp.ui.chat.ChatListScreen
+import com.example.studentcenterapp.ui.chat.ChatDetailScreen
+import com.example.studentcenterapp.ui.common.AppTab
+import com.example.studentcenterapp.ui.common.studentBottomTabs
+import com.example.studentcenterapp.ui.common.staffBottomTabs
+
 private const val ARG_STUDENT_ID = "studentId"
 
 private fun appointmentsRoute(studentId: String): String {
@@ -52,9 +54,40 @@ fun StudentCenterApp() {
 fun StudentCenterNavHost(
     navController: NavHostController
 ) {
-    // ✅ Repository ve DataSource'ları AppDI üzerinden merkezi yönetiyoruz
     val timeSlotDataSource = remember { InMemoryDataSource() }
     val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
+
+    // ROTA TAKİBİ
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // KULLANICI ROLÜNÜ TESPİT ET (Önemli: Personel mi Öğrenci mi?)
+    // Bu mantık, personel dashboard'dan başka sekmeye geçse bile rolü hatırlamasını sağlar.
+    val isUserStaff = remember(navBackStackEntry) {
+        currentRoute?.contains("staffDashboard") == true ||
+                navBackStackEntry?.arguments?.getString("entry") == "staff"
+    }
+
+    // Personel ID'sini sakla (Home'a dönerken lazım olacak)
+    val staffIdFromArgs = navBackStackEntry?.arguments?.getString("staffId")
+
+    // Merkezi Tab Geçiş Mantığı
+    val navigateToTab: (AppTab) -> Unit = { tab ->
+        val targetRoute = when (tab.route) {
+            "staff_home" -> "staffDashboard/$staffIdFromArgs?entry=staff"
+            else -> tab.route
+        }
+
+        if (currentRoute != targetRoute && targetRoute.isNotEmpty()) {
+            navController.navigate(targetRoute) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -83,15 +116,14 @@ fun StudentCenterNavHost(
 
         // --- Staff Auth ---
         composable(Screen.StaffLogin.route) {
-            val vm: StaffLoginViewModel = viewModel(
-                factory = StaffLoginViewModelFactory(AppDI.staffAuthRepository)
-            )
+            val vm: StaffLoginViewModel = viewModel(factory = StaffLoginViewModelFactory(AppDI.staffAuthRepository))
             StaffLoginScreen(
                 vm = vm,
                 onSignupClick = { navController.navigate(Screen.StaffSignup.route) },
+                onForgotPasswordClick = { navController.navigate("forgotPasswordEmail/staff") },
                 onSuccess = { staffId ->
                     navController.navigate("staffDashboard/$staffId?entry=staff") {
-                        popUpTo(Screen.StaffLogin.route) { inclusive = true }
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 }
             )
@@ -103,7 +135,7 @@ fun StudentCenterNavHost(
                 vm = vm,
                 onBackClick = { navController.popBackStack() },
                 onSuccess = {
-                    navController.navigate(Screen.SignupSuccess.route) {
+                    navController.navigate("signupSuccess/staff") {
                         popUpTo(Screen.StaffSignup.route) { inclusive = true }
                     }
                 }
@@ -116,7 +148,7 @@ fun StudentCenterNavHost(
             StudentLoginScreen(
                 viewModel = loginViewModel,
                 onSignupClick = { navController.navigate(Screen.StudentSignup.route) },
-                onForgotPasswordClick = { navController.navigate(Screen.ForgotPasswordEmail.route) },
+                onForgotPasswordClick = { navController.navigate("forgotPasswordEmail/student") },
                 onLoginSuccess = {
                     navController.navigate(Screen.Departments.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -130,7 +162,7 @@ fun StudentCenterNavHost(
             StudentSignupScreen(
                 viewModel = signupViewModel,
                 onSignupSuccess = {
-                    navController.navigate(Screen.SignupSuccess.route) {
+                    navController.navigate("signupSuccess/student") {
                         popUpTo(Screen.StudentSignup.route) { inclusive = true }
                     }
                 },
@@ -211,6 +243,7 @@ fun StudentCenterNavHost(
         }
 
         // --- Student Flow ---
+        // --- Student Flow (Departments, Services, Appointments) ---
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(factory = DepartmentListViewModelFactory(AppDI.departmentRepository))
             val state by vm.uiState.collectAsState()
@@ -228,6 +261,8 @@ fun StudentCenterNavHost(
                     launchSingleTop = true
                     restoreState = true
                 } },
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
                 onDepartmentClick = { deptId, deptName ->
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, deptName)
@@ -248,12 +283,14 @@ fun StudentCenterNavHost(
 
             ServiceListScreen(
                 state = state,
-                currentRoute = Screen.Services.route,
-                onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
-                onServiceClick = { serviceId, serviceName ->
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onServiceClick = { serviceId, serviceName, type ->
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_ID, serviceId)
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
+                    handle?.set("appointment_type", type)
+
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
                 },
                 onBackClick = { navController.popBackStack() },
@@ -261,38 +298,39 @@ fun StudentCenterNavHost(
             )
         }
 
-        timeSlotGraph(navController = navController, timeSlotRepository = timeSlotRepository)
-
-        // --- Confirm ---
-        composable(Screen.Confirm.route) {
-            val prev = navController.previousBackStackEntry?.savedStateHandle
-            val studentId = prev?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID).orEmpty()
-            val departmentName = prev?.get<String>(ConfirmationNavKeys.KEY_DEPARTMENT_NAME).orEmpty()
-            val serviceId = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_ID).orEmpty()
-            val serviceName = prev?.get<String>(ConfirmationNavKeys.KEY_SERVICE_NAME).orEmpty()
-            val timeSlotId = prev?.get<String>(ConfirmationNavKeys.KEY_TIMESLOT_ID).orEmpty()
-            val scheduledStartMillis = prev?.get<Long>(ConfirmationNavKeys.KEY_START_MILLIS) ?: 0L
-            val dateTimeText = prev?.get<String>(ConfirmationNavKeys.KEY_DATE_TEXT).orEmpty()
-
-            AppointmentConfirmationScreen(
-                studentId = studentId,
-                departmentName = departmentName,
-                serviceId = serviceId,
-                serviceName = serviceName,
-                timeSlotId = timeSlotId,
-                scheduledStartMillis = scheduledStartMillis,
-                dateTimeText = dateTimeText,
-                factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
-                onBack = { navController.popBackStack() },
-                onSuccessNavigate = {
-                    navController.navigate(appointmentsRoute(studentId)) {
-                        popUpTo(Screen.Confirm.route) { inclusive = true }
-                    }
-                }
+        // --- Chat Routes (Ortak Ekran Yönetimi) ---
+        composable(route = Screen.Chat.route) {
+            ChatListScreen(
+                tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
+                currentRoute = currentRoute,
+                isStaff = isUserStaff, // EKSİK PARAMETRE EKLENDİ
+                onTabSelected = navigateToTab,
+                onChatClick = { id, name -> navController.navigate("chatDetail/$id/$name") },
+                onNewChatClick = { /* New chat logic */ }
             )
         }
 
-        // --- Appointments ---
+        composable(
+            route = "chatDetail/{chatId}/{chatName}",
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("chatName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId").orEmpty()
+            val chatName = backStackEntry.arguments?.getString("chatName").orEmpty()
+
+            ChatDetailScreen(
+                tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
+                chatId = chatId,
+                chatTitle = chatName,
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // --- Appointment List ---
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
             arguments = listOf(navArgument(ARG_STUDENT_ID) { type = NavType.StringType; defaultValue = "" })
@@ -302,10 +340,15 @@ fun StudentCenterNavHost(
 
             AppointmentListScreen(
                 factory = factory,
-                onAppointmentClick = { id -> navController.navigate(Screen.AppointmentDetail.createRoute(id)) }
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onAppointmentClick = { id ->
+                    navController.navigate(Screen.AppointmentDetail.createRoute(id))
+                }
             )
         }
 
+        // --- Staff Dashboard ---
         composable(
             route = Screen.AppointmentDetail.route,
             arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
@@ -321,21 +364,18 @@ fun StudentCenterNavHost(
         }
         // --- Staff Dashboard (GÜNCELLENMİŞ) ---
         composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
+            route = "staffDashboard/{staffId}?entry={entry}",
+            arguments = listOf(
+                navArgument("staffId") { type = NavType.StringType },
+                navArgument("entry") { type = NavType.StringType; defaultValue = "staff" }
+            )
+        ) { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
-            val entry = backStackEntry.arguments?.getString("entry").orEmpty()
-
-            if (staffId.isBlank() || entry != "staff") {
-                navController.navigate(Screen.Welcome.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true }
-                }
-                return@composable
-            }
 
             val vm: StaffDashboardViewModel = viewModel(
                 factory = StaffDashboardViewModelFactory(staffId, AppDI.staffRepository)
             )
 
-            // ViewModel'deki tüm Flow'ları dinle (collectAsState)
             val state by vm.uiState.collectAsState()
             val staffName by vm.staffName.collectAsState()
             val currentFilter by vm.currentFilter.collectAsState()
@@ -344,25 +384,19 @@ fun StudentCenterNavHost(
 
             StaffDashboardScreen(
                 state = state,
-                staffName = staffName, // Artık dinamik!
-                selectedFilter = currentFilter, // Filtre durumu!
-                onFilterChanged = { vm.onFilterChanged(it) }, // Filtreleme aksiyonu!
+                staffName = staffName,
+                selectedFilter = currentFilter,
+                onFilterChanged = { vm.onFilterChanged(it) },
                 actionLoading = actionLoading,
                 actionError = actionError,
-                currentRoute = Screen.StaffDashboard.route,
-                onTabSelected = { tab ->
-                    navController.navigate(tab.route) { launchSingleTop = true }
-                },
+                // Dashboard'dayken ikonun yeşil yanması için rotayı "staff_home" olarak simüle ediyoruz
+                currentRoute = if (currentRoute?.contains("staffDashboard") == true) "staff_home" else currentRoute,
+                onTabSelected = navigateToTab,
                 onApprove = { vm.approve(it) },
                 onReject = { vm.reject(it) }
             )
         }
-    }
-}
 
-@Composable
-private fun PlaceholderScreen(name: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "TODO: $name screen")
+        // Diğer yardımcı rotalar (Success, Password Reset vb.) buraya eklenebilir...
     }
 }
