@@ -52,7 +52,6 @@ fun StudentCenterApp() {
 fun StudentCenterNavHost(
     navController: NavHostController
 ) {
-    // ✅ Repository ve DataSource'ları AppDI üzerinden merkezi yönetiyoruz
     val timeSlotDataSource = remember { InMemoryDataSource() }
     val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
 
@@ -89,6 +88,7 @@ fun StudentCenterNavHost(
             StaffLoginScreen(
                 vm = vm,
                 onSignupClick = { navController.navigate(Screen.StaffSignup.route) },
+                onForgotPasswordClick = { navController.navigate("forgotPasswordEmail/staff") },
                 onSuccess = { staffId ->
                     navController.navigate("staffDashboard/$staffId?entry=staff") {
                         popUpTo(Screen.StaffLogin.route) { inclusive = true }
@@ -103,7 +103,7 @@ fun StudentCenterNavHost(
                 vm = vm,
                 onBackClick = { navController.popBackStack() },
                 onSuccess = {
-                    navController.navigate(Screen.SignupSuccess.route) {
+                    navController.navigate("signupSuccess/staff") {
                         popUpTo(Screen.StaffSignup.route) { inclusive = true }
                     }
                 }
@@ -116,7 +116,7 @@ fun StudentCenterNavHost(
             StudentLoginScreen(
                 viewModel = loginViewModel,
                 onSignupClick = { navController.navigate(Screen.StudentSignup.route) },
-                onForgotPasswordClick = { navController.navigate(Screen.ForgotPasswordEmail.route) },
+                onForgotPasswordClick = { navController.navigate("forgotPasswordEmail/student") },
                 onLoginSuccess = {
                     navController.navigate(Screen.Departments.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -130,7 +130,7 @@ fun StudentCenterNavHost(
             StudentSignupScreen(
                 viewModel = signupViewModel,
                 onSignupSuccess = {
-                    navController.navigate(Screen.SignupSuccess.route) {
+                    navController.navigate("signupSuccess/student") {
                         popUpTo(Screen.StudentSignup.route) { inclusive = true }
                     }
                 },
@@ -138,32 +138,38 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(Screen.SignupSuccess.route) {
+        // --- Common Success & Password Flow ---
+        composable("signupSuccess/{userType}") { backStackEntry ->
+            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
             SignupSuccessScreen(onLoginClick = {
-                navController.navigate(Screen.StudentLogin.route) {
+                val target = if (userType == "staff") Screen.StaffLogin.route else Screen.StudentLogin.route
+                navController.navigate(target) {
                     popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
             })
         }
 
-        composable(Screen.ForgotPasswordEmail.route) {
+        composable("forgotPasswordEmail/{userType}") { backStackEntry ->
+            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
             val vm: ForgotPasswordViewModel = viewModel()
             ForgotPasswordEmailScreen(
                 viewModel = vm,
-                onCodeSent = { navController.navigate("passwordResetSuccess") },
+                onCodeSent = { navController.navigate("passwordResetSuccess/$userType") },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable("passwordResetSuccess") {
+        composable("passwordResetSuccess/{userType}") { backStackEntry ->
+            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
             PasswordResetSuccessScreen(onLoginClick = {
-                navController.navigate(Screen.StudentLogin.route) {
-                    popUpTo("passwordResetSuccess") { inclusive = true }
+                val target = if (userType == "staff") Screen.StaffLogin.route else Screen.StudentLogin.route
+                navController.navigate(target) {
+                    popUpTo(Screen.Welcome.route) { inclusive = true }
                 }
             })
         }
 
-        // --- Student Flow ---
+        // --- Student Flow (Departments, Services, Appointments) ---
         composable(Screen.Departments.route) {
             val vm: DepartmentListViewModel = viewModel(factory = DepartmentListViewModelFactory(AppDI.departmentRepository))
             val state by vm.uiState.collectAsState()
@@ -209,7 +215,6 @@ fun StudentCenterNavHost(
 
         timeSlotGraph(navController = navController, timeSlotRepository = timeSlotRepository)
 
-        // --- Confirm ---
         composable(Screen.Confirm.route) {
             val prev = navController.previousBackStackEntry?.savedStateHandle
             val studentId = prev?.get<String>(ConfirmationNavKeys.KEY_STUDENT_ID).orEmpty()
@@ -238,7 +243,6 @@ fun StudentCenterNavHost(
             )
         }
 
-        // --- Appointments ---
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
             arguments = listOf(navArgument(ARG_STUDENT_ID) { type = NavType.StringType; defaultValue = "" })
@@ -264,7 +268,7 @@ fun StudentCenterNavHost(
             )
         }
 
-        // --- Staff Dashboard (GÜNCELLENMİŞ) ---
+        // --- Staff Dashboard ---
         composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
             val entry = backStackEntry.arguments?.getString("entry").orEmpty()
@@ -280,7 +284,6 @@ fun StudentCenterNavHost(
                 factory = StaffDashboardViewModelFactory(staffId, AppDI.staffRepository)
             )
 
-            // ViewModel'deki tüm Flow'ları dinle (collectAsState)
             val state by vm.uiState.collectAsState()
             val staffName by vm.staffName.collectAsState()
             val currentFilter by vm.currentFilter.collectAsState()
@@ -289,9 +292,9 @@ fun StudentCenterNavHost(
 
             StaffDashboardScreen(
                 state = state,
-                staffName = staffName, // Artık dinamik!
-                selectedFilter = currentFilter, // Filtre durumu!
-                onFilterChanged = { vm.onFilterChanged(it) }, // Filtreleme aksiyonu!
+                staffName = staffName,
+                selectedFilter = currentFilter,
+                onFilterChanged = { vm.onFilterChanged(it) },
                 actionLoading = actionLoading,
                 actionError = actionError,
                 currentRoute = Screen.StaffDashboard.route,
