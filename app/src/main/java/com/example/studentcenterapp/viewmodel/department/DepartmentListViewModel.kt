@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.studentcenterapp.data.department.DepartmentRepository
 import com.example.studentcenterapp.model.Department
 import com.example.studentcenterapp.ui.state.UiState
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,10 +19,28 @@ class DepartmentListViewModel(
     private val _uiState = MutableStateFlow<UiState<List<Department>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<Department>>> = _uiState.asStateFlow()
 
+    // İSMİ TUTACAK YENİ STATE
+    private val _userName = MutableStateFlow("Öğrenci")
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
     init {
         loadDepartments()
+        fetchUserName() // Uygulama açılınca ismi çek
     }
 
+    private fun fetchUserName() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            FirebaseFirestore.getInstance().collection("users").document(userId).get()
+                .addOnSuccessListener { document ->
+                    val fullName = document.getString("fullName")
+                    if (!fullName.isNullOrBlank()) {
+                        // "Deniz Akboğa" gelirse sadece "Deniz" kısmını alır
+                        _userName.value = fullName.split(" ").first()
+                    }
+                }
+        }
+    }
     fun loadDepartments() {
         viewModelScope.launch {
             _uiState.value = UiState.Loading

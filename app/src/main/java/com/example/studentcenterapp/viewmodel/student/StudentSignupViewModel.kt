@@ -10,6 +10,9 @@ import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.student.StudentRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.Timestamp
 
 class StudentSignupViewModel(private val repository: StudentRepository) : ViewModel() {
     var email by mutableStateOf("")
@@ -78,19 +81,39 @@ class StudentSignupViewModel(private val repository: StudentRepository) : ViewMo
         errorMessage = null
         viewModelScope.launch {
             isLoading = true
-            // Repository'e tüm bu alanları gönderiyoruz
-            val result = repository.signup(
-                name = fullName,
-                surname = "", // Gerekirse ayırabilirsin
-                schoolNumber = schoolNumber,
-                email = email,
-                password = password,
-                birthDay = birthDay,
-                birthMonth = birthMonth,
-                birthYear = birthYear
-            )
-            isLoading = false
-            result.onSuccess { onSuccess() }
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+            // 1. Firebase Auth ile hesap aç
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener { authResult ->
+                    val userId = authResult.user?.uid ?: ""
+
+                    // 2. Kullanıcı bilgilerini bir paket yap (İsimleri dilediğin gibi koyabilirsin!)
+                    val studentData = hashMapOf(
+                        "fullName" to fullName,
+                        "email" to email,
+                        "schoolNumber" to schoolNumber,
+                        "birthDate" to "$birthDay/$birthMonth/$birthYear",
+                        "role" to "student", // Bu çok önemli, personeli buradan ayıracağız
+                        "createdAt" to com.google.firebase.Timestamp.now()
+                    )
+
+                    // 3. Firestore'da "users" diye bir yere bu ID ile kaydet
+                    db.collection("users").document(userId).set(studentData)
+                        .addOnSuccessListener {
+                            isLoading = false
+                            onSuccess() // Ekranda bir sonraki yere git (Home Screen)
+                        }
+                        .addOnFailureListener { e ->
+                            isLoading = false
+                            errorMessage = "Veritabanı hatası: ${e.message}"
+                        }
+                }
+                .addOnFailureListener { e ->
+                    isLoading = false
+                    errorMessage = "Kayıt hatası: ${e.message}"
+                }
         }
     }
     fun updateDate(millis: Long?) {

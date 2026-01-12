@@ -55,6 +55,7 @@ import com.example.studentcenterapp.ui.theme.lightText
 fun DepartmentListScreen(
     state: UiState<List<Department>>,
     currentRoute: String?,
+    userName: String,
     onTabSelected: (AppTab) -> Unit,
     onDepartmentClick: (departmentId: String, departmentName: String) -> Unit
 
@@ -78,6 +79,7 @@ fun DepartmentListScreen(
             ContentCard(modifier = Modifier.fillMaxSize()) {
                 DepartmentListContent(
                     state = state,
+                    userName= userName,
                     onDepartmentClick = onDepartmentClick
                 )
             }
@@ -89,6 +91,7 @@ fun DepartmentListScreen(
 @Composable
 private fun DepartmentListContent(
     state: UiState<List<Department>>,
+    userName: String,
     onDepartmentClick:(departmentId: String, departmentName: String) -> Unit
 ) {
     // 8 birimlik liste (state.data içinden gelecek)
@@ -101,7 +104,7 @@ private fun DepartmentListContent(
         Spacer(modifier = Modifier.height(26.dp)) // Tepeden Merhaba Deniz'e kadar 26
 
         Text(
-            text = "Merhaba, Deniz.",
+            text = "Merhaba, $userName.",
             style = TextStyle(
                 fontFamily = Figtree,
                 fontWeight = FontWeight.Bold,

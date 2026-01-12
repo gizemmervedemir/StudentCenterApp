@@ -62,6 +62,7 @@ import com.example.studentcenterapp.ui.appointments.components.AppointmentDetail
 import com.example.studentcenterapp.viewmodel.appointment.AppointmentDetailViewModelFactory
 
 import com.example.studentcenterapp.ui.appointment.AppointmentDetailRoute
+import com.example.studentcenterapp.ui.student.PasswordResetSuccessScreen
 
 // -------------------------
 // Query param key for appointments list
@@ -202,12 +203,27 @@ fun StudentCenterNavHost(
             )
         }
 
+// 1. Yeni rotayı ekle
+        composable("passwordResetSuccess") {
+            PasswordResetSuccessScreen(
+                onLoginClick = {
+                    navController.navigate(Screen.StudentLogin.route) {
+                        popUpTo("passwordResetSuccess") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+// 2. ForgotPasswordEmail bloğunu güncelle
         composable(Screen.ForgotPasswordEmail.route) {
             val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
 
             ForgotPasswordEmailScreen(
                 viewModel = forgotPasswordViewModel,
-                onCodeSent = { navController.navigate(Screen.ForgotPasswordCode.route) },
+                onCodeSent = {
+                    // Başarılı olunca yeni ekrana git
+                    navController.navigate("passwordResetSuccess")
+                },
                 onBackClick = { navController.popBackStack() }
             )
         }
@@ -219,10 +235,13 @@ fun StudentCenterNavHost(
             val vm: DepartmentListViewModel = viewModel(
                 factory = DepartmentListViewModelFactory(AppDI.departmentRepository)
             )
+
             val state by vm.uiState.collectAsState()
+            val userName by vm.userName.collectAsState() // ViewModel'deki ismi dinle
 
             DepartmentListScreen(
                 state = state,
+                userName = userName, // İsmi ekrana gönderdik!
                 currentRoute = Screen.Departments.route,
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) { launchSingleTop = true }
