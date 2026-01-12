@@ -3,6 +3,8 @@ package com.example.studentcenterapp.ui.service
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.*
@@ -35,22 +37,16 @@ fun ServiceListScreen(
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
     onServiceClick: (serviceId: String, serviceName: String) -> Unit,
-    onBackClick: () -> Unit, // Geri dönüş için yeni parametre
+    onBackClick: () -> Unit,
     onRetry: (() -> Unit)? = null
 ) {
+    // Kaydırma durumunu saklamak için
+    val scrollState = rememberScrollState()
+
     Scaffold(
-        topBar = {
-            // Figma'ya uygun olması için başlığı boş bırakabilir
-            // veya geri butonunu buraya da gömebiliriz.
-            // Ama senin istediğin kartın içindeki tasarım olduğu için boş bırakıyoruz.
-            AppTopBar(title = "")
-        },
+        topBar = { AppTopBar(title = "") },
         bottomBar = {
-            AppBottomBar(
-                tabs = bottomTabs,
-                currentRoute = currentRoute,
-                onTabSelected = onTabSelected
-            )
+            AppBottomBar(tabs = bottomTabs, currentRoute = currentRoute, onTabSelected = onTabSelected)
         },
         containerColor = PrimaryBlue
     ) { innerPadding ->
@@ -66,17 +62,14 @@ fun ServiceListScreen(
                     val service = state.data.firstOrNull()
 
                     if (service == null) {
-                        EmptyStateScreen(
-                            config = EmptyStateConfig(title = "Hizmet Yok", message = "Detay bulunamadı.")
-                        )
+                        EmptyStateScreen(config = EmptyStateConfig(title = "Hizmet Yok", message = "Detay bulunamadı."))
                     } else {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
-                            horizontalAlignment = Alignment.Start // Tüm içeriği sola yasladık
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
                         ) {
-                            // 1. Geri Dönüş Oku (ForgotPassword'daki gibi)
+                            // 1. Geri Butonu
                             Icon(
                                 imageVector = Icons.Default.ArrowBackIosNew,
                                 contentDescription = "Geri",
@@ -86,51 +79,65 @@ fun ServiceListScreen(
                                     .size(24.dp)
                             )
 
-                            // 2. Dinamik Görsel Bölümü (Ortalı durması estetik açıdan daha iyidir)
-                            val imageResId = getDrawableResource(service.imageName)
-                            Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-                                Image(
-                                    painter = painterResource(id = imageResId),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxHeight(),
-                                    contentScale = ContentScale.Fit
+                            // 2. Kaydırılabilir İçerik Alanı
+                            // weight(1f) vererek butonu aşağı iteriz ama içeriği kendi içinde kaydırırız
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .verticalScroll(scrollState)
+                                    .fillMaxWidth()
+                            ) {
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Dinamik Görsel
+                                val imageResId = getDrawableResource(service.imageName)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp), // Sabit yükseklik düzeni korur
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = imageResId),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                // Birim Başlığı
+                                Text(
+                                    text = service.name,
+                                    style = TextStyle(
+                                        fontFamily = Figtree,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 24.sp
+                                    ),
+                                    color = DarkText
                                 )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Birim Açıklaması
+                                Text(
+                                    text = service.description,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = lightText,
+                                    textAlign = TextAlign.Start
+                                )
+
+                                // Metin bitince butonla arasında nefes payı bırakmak için
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
 
-                            Spacer(modifier = Modifier.height(22.dp))
-
-                            // 3. Birim Başlığı (Sola Yaslı)
-                            Text(
-                                text = service.name,
-                                style = TextStyle(
-                                    fontFamily = Figtree,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 22.sp
-                                ),
-                                color = DarkText,
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // 4. Birim Açıklaması (Sola Yaslı ve Satır Aralığı Düzenlenmiş)
-                            Text(
-                                text = service.description,
-                                style =MaterialTheme.typography.labelMedium,
-                                color = lightText,
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f) // Butonu alta iter
-                            )
-
-                            // 5. Randevu Al Butonu
+                            // 3. Sabit "Randevu Al" Butonu
+                            // Column dışında olduğu için her zaman en altta çakılı durur
                             PrimaryButton(
                                 text = "Randevu Al",
                                 onClick = { onServiceClick(service.id, service.name) },
-                                modifier = Modifier.padding(top = 16.dp).align(Alignment.CenterHorizontally)
-                            )
+                                modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
                     }
                 }
@@ -139,14 +146,15 @@ fun ServiceListScreen(
     }
 }
 private fun ColumnScope.getDrawableResource(imageName: String?): Int {
+
     return when (imageName) {
         "ic_gelisim" -> R.drawable.ic_gelisim
         "ic_burs" -> R.drawable.ic_burs
         "ic_kariyer" -> R.drawable.ic_kariyer
-        "ic_beslenme" -> R.drawable.ic_beslenme
+        "beslenme__" -> R.drawable.beslenme__
         "ic_mezun" -> R.drawable.ic_mezun
         "ic_psikolojik" -> R.drawable.yenipng
-        "ic_kültür" -> R.drawable.ic_kultur
+        "ic_kultur" -> R.drawable.ic_kultur
         "ic_spor" -> R.drawable.ic_spor
 
         // Buraya kullandığın tüm ikonları ekle

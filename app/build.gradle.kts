@@ -62,6 +62,7 @@ dependencies {
     // Auth ve Firestore
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation(libs.androidx.compose.foundation)
 
 
 
