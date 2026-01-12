@@ -36,9 +36,9 @@ data class AppTab(
  */
 private fun createTabs(homeRoute: String) = listOf(
     AppTab(route = homeRoute, iconRes = R.drawable.material_symbols_home_rounded, contentDescription = "Home"),
-    AppTab(route = "calendar", iconRes = R.drawable.solar_calendar_bold, contentDescription = "Calendar"),
-    AppTab(route = "chat", iconRes = R.drawable.mynaui_message_solid, contentDescription = "Messages"),
-    AppTab(route = "profile", iconRes = R.drawable.qlementine_icons_user_16, contentDescription = "Profile")
+    AppTab(route = Screen.StudentCalendar.route, iconRes = R.drawable.solar_calendar_bold, contentDescription = "Calendar"),
+    AppTab(route = Screen.Chat.route, iconRes = R.drawable.mynaui_message_solid, contentDescription = "Messages"),
+    AppTab(route = Screen.StudentProfile.route, iconRes = R.drawable.qlementine_icons_user_16, contentDescription = "Profile")
 )
 
 // Mevcut NavHost yapını bozmamak için bu değişkenleri dışarıya açık bırakıyoruz

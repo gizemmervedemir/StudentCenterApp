@@ -44,8 +44,9 @@ import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.navigation.Screen
 import com.example.studentcenterapp.ui.appointments.AppointmentListFilter
 import com.example.studentcenterapp.ui.common.AppBottomBar
+import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.AppTopBar
-import com.example.studentcenterapp.ui.common.bottomTabs
+import com.example.studentcenterapp.ui.common.studentBottomTabs
 import com.example.studentcenterapp.ui.theme.ButtonStudentCalendar
 import com.example.studentcenterapp.ui.theme.Figtree
 import com.example.studentcenterapp.ui.theme.GreyBox
@@ -57,7 +58,9 @@ import com.example.studentcenterapp.viewmodel.appointment.AppointmentListViewMod
 @Composable
 fun StudentCalendarScreen(
     navController: NavHostController,
-    viewModel: AppointmentListViewModel
+    viewModel: AppointmentListViewModel,
+    currentRoute: String?,            // EKLENDİ
+    onTabSelected: (AppTab) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -79,11 +82,9 @@ fun StudentCalendarScreen(
             topBar = { AppTopBar(title = "Takvim") },
             bottomBar = {
                 AppBottomBar(
-                    tabs = bottomTabs,
-                    currentRoute = Screen.StudentCalendar.route,
-                    onTabSelected = { tab ->
-                        navController.navigate(tab.route) { launchSingleTop = true }
-                    }
+                    tabs = studentBottomTabs,
+                    currentRoute = currentRoute,
+                    onTabSelected = onTabSelected // Merkezi fonksiyona bağlandı
                 )
             },
             containerColor = Color.Transparent

@@ -198,20 +198,19 @@ fun StudentCenterNavHost(
 
 // --- Student Bottom Bar Screens ---
         composable(Screen.StudentCalendar.route) {
-            // StudentSession'dan güncel giriş yapmış öğrencinin ID'sini alıyoruz
             val currentStudentId = StudentSession.currentStudentId ?: ""
-
-            // ViewModel'ı AppDI üzerinden gelen repository ile kuruyoruz
             val vm: AppointmentListViewModel = viewModel(
                 factory = AppointmentListViewModelFactory(
                     studentId = currentStudentId,
-                    appointmentRepository = AppDI.appointmentRepository // Hata düzeldi ✅
+                    appointmentRepository = AppDI.appointmentRepository
                 )
             )
 
             StudentCalendarScreen(
                 navController = navController,
-                viewModel = vm
+                viewModel = vm,
+                currentRoute = currentRoute,      // EKLENDİ
+                onTabSelected = navigateToTab     // EKLENDİ (Merkezi Fonksiyon)
             )
         }
 
@@ -226,21 +225,21 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(Screen.StudentChat.route) {
-            PlaceholderScreen(
-                name = "Öğrenci Destek",
-//                currentRoute = Screen.StudentChat.route,
-//                navController = navController
-            )
-        }
+//        composable(Screen.StudentChat.route) {
+//            PlaceholderScreen(
+//                name = "Öğrenci Destek",
+////                currentRoute = Screen.StudentChat.route,
+////                navController = navController
+//            )
+//        }
 
-        composable(Screen.StudentProfile.route) {
-            PlaceholderScreen(
-                name = "Öğrenci Profili",
-//                currentRoute = Screen.StudentProfile.route,
-//                navController = navController
-            )
-        }
+//        composable(Screen.StudentProfile.route) {
+////            PlaceholderScreen(
+////                name = "Öğrenci Profili",
+//////                currentRoute = Screen.StudentProfile.route,
+//////                navController = navController
+////            )
+//        }
 
         // --- Student Flow ---
         // --- Student Flow (Departments, Services, Appointments) ---
@@ -252,15 +251,6 @@ fun StudentCenterNavHost(
             DepartmentListScreen(
                 state = state,
                 userName = userName,
-                currentRoute = Screen.Departments.route,
-                onTabSelected = { tab -> navController.navigate(tab.route) {
-                    // Ana sayfayı (Departments) root yaparak geri tuşu karmaşasını önleriz
-                    popUpTo(Screen.Departments.route) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                } },
                 currentRoute = currentRoute,
                 onTabSelected = navigateToTab,
                 onDepartmentClick = { deptId, deptName ->
@@ -363,13 +353,13 @@ fun StudentCenterNavHost(
             )
         }
         // --- Staff Dashboard (GÜNCELLENMİŞ) ---
-        composable("staffDashboard/{staffId}?entry={entry}") { backStackEntry ->
+        composable(
             route = "staffDashboard/{staffId}?entry={entry}",
             arguments = listOf(
                 navArgument("staffId") { type = NavType.StringType },
                 navArgument("entry") { type = NavType.StringType; defaultValue = "staff" }
             )
-        ) { backStackEntry ->
+        ) {backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
 
             val vm: StaffDashboardViewModel = viewModel(
