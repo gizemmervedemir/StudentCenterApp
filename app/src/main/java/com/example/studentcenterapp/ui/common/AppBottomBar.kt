@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,7 +25,7 @@ data class AppTab(
 )
 val bottomTabs = listOf(
     AppTab(
-        route = "home",
+        route = "departments",
         iconRes = R.drawable.material_symbols_home_rounded,
         contentDescription = "Home"
     ),
@@ -61,13 +62,19 @@ fun AppBottomBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEach { tab ->
-            val isSelected = tab.route == currentRoute
+            // 1. ADIM: Seçili olma mantığını hem tam eşleşme hem de rota başlangıcı olarak kontrol et
+            // (Splash veya detay sayfalarından dönerken hata payını sıfırlar)
+            val isSelected = remember (currentRoute) {
+                currentRoute?.contains(tab.route, ignoreCase = true) == true
+            }
 
             IconButton(onClick = { onTabSelected(tab) }) {
                 Icon(
                     painter = painterResource(id = tab.iconRes),
                     contentDescription = tab.contentDescription,
-                    tint = Color.Unspecified
+                    // 2. ADIM: Renklendirmeyi seçili duruma göre yap
+                    // Eğer seçiliyse PrimaryGreen (Yeşil), değilse Beyaz/Gri kalsın
+                    tint = if (isSelected) PrimaryGreen else Color.White
                 )
             }
         }
