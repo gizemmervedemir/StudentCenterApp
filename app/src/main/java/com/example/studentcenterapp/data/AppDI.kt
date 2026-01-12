@@ -22,6 +22,8 @@ object AppDI {
     // Student için Firestore tabanlı bir veri kaynağı (Gelecekte değiştirilebilir)
     private val studentDataSource: StudentDataSource = InMemoryStudentDataSource()
 
+
+
     // --- 2. Repositories (Depolar) ---
 
     // Departman (Bölüm) İşlemleri
@@ -36,7 +38,7 @@ object AppDI {
 
     // Öğrenci Profil ve Veri İşlemleri
     val studentRepository: StudentRepository by lazy {
-        StudentRepositoryImpl(studentDataSource)
+        StudentRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
     // Randevu İşlemleri (Hem Öğrenci hem Personel için Ortak)
@@ -46,7 +48,7 @@ object AppDI {
 
     // Personel Dashboard ve Onay İşlemleri
     val staffRepository: StaffRepository by lazy {
-        StaffRepositoryImpl(appointmentFirestoreDataSource)
+        StaffRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
     // --- 3. Mesajlaşma (Chat) ---

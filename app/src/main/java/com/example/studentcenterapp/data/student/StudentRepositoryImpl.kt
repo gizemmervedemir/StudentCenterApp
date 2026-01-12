@@ -1,18 +1,33 @@
 package com.example.studentcenterapp.data.student
 
 import com.example.studentcenterapp.model.Student
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class StudentRepositoryImpl(
-    private val dataSource: StudentDataSource
-) : StudentRepository {
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()) : StudentRepository {
 
-    override suspend fun getCurrentStudent(): Student {
-        return dataSource.getCurrentStudent()
-    }
+    override suspend fun getCurrentStudent(): Student = TODO()
 
     override suspend fun getStudentById(id: String): Student? {
-        return dataSource.getStudentById(id)
+        return try {
+            val doc = firestore.collection("users").document(id).get().await()
+            if (!doc.exists()) return null
+
+            Student(
+                id = id,
+                // Firebase alan isimleri: fullName, schoolNumber
+                name = doc.getString("fullName") ?: "",
+                email = doc.getString("email") ?: "",
+                studentNumber = doc.getString("schoolNumber") ?: "",
+                // Eğer modelinde profilePictureUrl varsa ekleyebilirsin:
+                // profilePictureUrl = doc.getString("profilePictureUrl")
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
+
 
     override suspend fun login(email: String, password: String): Result<Student> {
         kotlinx.coroutines.delay(1000) // Gerçekçi bir bekleme
@@ -38,5 +53,18 @@ class StudentRepositoryImpl(
         kotlinx.coroutines.delay(1000)
         // Kayıt başarılı simülasyonu
         return Result.success(Student("new_id", "$name $surname", email, schoolNumber))
+    }
+
+    override suspend fun updateStudentProfile(id: String, name: String, email: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "fullName" to name,   // ✅ users alan adı
+                "email" to email
+            )
+            firestore.collection("users").document(id).update(updates).await() // ✅ users
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

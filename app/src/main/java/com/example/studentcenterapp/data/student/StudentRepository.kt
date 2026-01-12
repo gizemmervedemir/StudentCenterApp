@@ -17,4 +17,6 @@ interface StudentRepository {
         birthMonth: String,
         birthYear: String
     ): Result<Student>
+    // Mevcutların altına ekle
+    suspend fun updateStudentProfile(id: String, name: String, email: String): Result<Unit>
 }
