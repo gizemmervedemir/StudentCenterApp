@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.studentBottomTabs
 import com.example.studentcenterapp.viewmodel.appointment.TimeSlotCalendarViewModel
 import com.example.studentcenterapp.viewmodel.appointment.TimeSlotGrid
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -140,60 +143,122 @@ fun AppointmentConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    // Tarih formatlama (Görseldeki gibi: 20 Ekim, Pazartesi)
+    val dateText = try {
+        val date = LocalDate.parse(slot.date)
+        date.format(DateTimeFormatter.ofPattern("dd MMMM, EEEE", Locale("tr")))
+    } catch (e: Exception) {
+        slot.date
+    }
+
     Dialog(onDismissRequest = onDismiss) {
+        // Dış Kutu (Görseldeki koyu gri/siyahımsı arka plan efekti için)
         Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(28.dp),
+            color = Color(0xFFD1D1D1), // Kartın arka plan rengi
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.Start
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
             ) {
+                // Başlık: Tarih
                 Text(
-                    text = slot.date, // Gerekirse parse edilip formatlanabilir
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = dateText,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Saat Satırı
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(text = "${slot.startTime} - ${slot.endTime}", fontSize = 14.sp, color = Color.DarkGray)
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        tint = Color(0xFF333333),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = slot.startTime,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF333333)
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(text = serviceName, fontSize = 14.sp, color = Color.DarkGray)
+                // Uzman ve Servis Satırı
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color(0xFF333333),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Elif Yılmaz", // Örnek isim (Statik veya modelden gelebilir)
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF333333)
+                        )
+                        Text(
+                            text = serviceName,
+                            fontSize = 14.sp,
+                            color = Color(0xFF555555)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // Butonlar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Onayla Butonu (Yeşil)
                     Button(
                         onClick = onConfirm,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF48C9B0)),
-                        shape = RoundedCornerShape(20.dp)
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33C29D)),
+                        shape = RoundedCornerShape(25.dp)
                     ) {
-                        Text("Onayla", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Onayla",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
-                    OutlinedButton(
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Geri Dön Butonu (Açık Gri)
+                    Button(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        border = BorderStroke(1.dp, Color.LightGray),
-                        shape = RoundedCornerShape(20.dp)
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEBEBEB)),
+                        shape = RoundedCornerShape(25.dp)
                     ) {
-                        Text("Geri Dön", color = Color.Gray)
+                        Text(
+                            "Geri Dön",
+                            color = Color(0xFF666666),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
