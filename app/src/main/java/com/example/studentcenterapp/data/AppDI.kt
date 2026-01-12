@@ -7,61 +7,95 @@ import com.example.studentcenterapp.data.service.*
 import com.example.studentcenterapp.data.staff.*
 import com.example.studentcenterapp.data.student.*
 import com.example.studentcenterapp.data.appointment.*
-import com.example.studentcenterapp.data.chat.ChatRepository // Chat için gerekli import
+import com.example.studentcenterapp.data.chat.ChatRepository
+import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
+import com.example.studentcenterapp.data.timeslot.TimeSlotRepository
+import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.google.firebase.firestore.FirebaseFirestore
 
 object AppDI {
 
-    // --- 1. DataSources (Veri Kaynakları) ---
-
+    // --- 1. Veri Kaynakları (DataSources) ---
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
-    private val departmentDataSource: DepartmentDataSource = FirestoreDepartmentDataSource()
-    private val serviceDataSource: ServiceDataSource = FirestoreServiceDataSource()
-    private val appointmentFirestoreDataSource = FirestoreAppointmentDataSource()
 
-    // Student için Firestore tabanlı bir veri kaynağı (Gelecekte değiştirilebilir)
-    private val studentDataSource: StudentDataSource = InMemoryStudentDataSource()
+    private val departmentDataSource: DepartmentDataSource by lazy { FirestoreDepartmentDataSource() }
+    private val serviceDataSource: ServiceDataSource by lazy { FirestoreServiceDataSource() }
+
+    // Randevular için tek bir Firestore veri kaynağı
+    private val appointmentFirestoreDataSource: FirestoreAppointmentDataSource by lazy {
+        FirestoreAppointmentDataSource()
+    }
 
 
 
     // --- 2. Repositories (Depolar) ---
+    // --- 2. Depolar (Repositories) ---
 
-    // Departman (Bölüm) İşlemleri
     val departmentRepository: DepartmentRepository by lazy {
         DepartmentRepositoryImpl(departmentDataSource)
     }
 
-    // Servis (Hizmet) İşlemleri
     val serviceRepository: ServiceRepository by lazy {
         ServiceRepositoryImpl(serviceDataSource)
     }
 
-    // Öğrenci Profil ve Veri İşlemleri
     val studentRepository: StudentRepository by lazy {
         StudentRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
-    // Randevu İşlemleri (Hem Öğrenci hem Personel için Ortak)
+    // ✅ Firebase Randevu İşlemleri
     val appointmentRepository: AppointmentRepository by lazy {
         AppointmentRepositoryImpl(appointmentFirestoreDataSource)
     }
 
-    // Personel Dashboard ve Onay İşlemleri
     val staffRepository: StaffRepository by lazy {
         StaffRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
-    // --- 3. Mesajlaşma (Chat) ---
-
-    // Mesajlaşma işlemlerini yürüten repository
     val chatRepository: ChatRepository by lazy {
         ChatRepository(db = firestore)
     }
 
-    // --- 4. Kimlik Doğrulama (Auth) ---
-
-    // Personel Giriş ve Kayıt İşlemleri
     val staffAuthRepository: StaffAuthRepository by lazy {
         FirebaseAuthStaffAuthRepository()
+    }
+
+    // --- 3. Zaman Dilimi (TimeSlot) İşlemleri ---
+
+    val timeSlotDataSource: InMemoryDataSource by lazy {
+        InMemoryDataSource().apply {
+            seedTimeSlots(generateMockTimeSlots())
+        }
+    }
+
+    val timeSlotRepository: TimeSlotRepository by lazy {
+        TimeSlotRepositoryImpl(timeSlotDataSource)
+    }
+
+    private fun generateMockTimeSlots(): List<com.example.studentcenterapp.model.TimeSlot> {
+        val realServiceIds = listOf("101", "201", "301", "401", "501", "601", "701", "801")
+        val dates = listOf("2026-01-20", "2026-01-21", "2026-01-22")
+        val times = listOf("09:00", "10:00", "11:00", "14:00", "15:00", "16:00")
+
+        val slots = mutableListOf<com.example.studentcenterapp.model.TimeSlot>()
+        var idCounter = 1
+
+        realServiceIds.forEach { sId ->
+            dates.forEach { dStr ->
+                times.forEach { tStr ->
+                    slots.add(
+                        com.example.studentcenterapp.model.TimeSlot(
+                            id = "slot_${idCounter++}",
+                            serviceId = sId,
+                            date = dStr,
+                            startTime = tStr,
+                            endTime = "${tStr.split(":")[0].toInt() + 1}:00",
+                            isReserved = false
+                        )
+                    )
+                }
+            }
+        }
+        return slots
     }
 }

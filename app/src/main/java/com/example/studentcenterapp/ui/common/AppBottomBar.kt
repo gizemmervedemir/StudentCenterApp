@@ -67,12 +67,8 @@ fun AppBottomBar(
             val isSelected = remember(currentRoute) {
                 if (currentRoute == null) return@remember false
 
-                // Özel durum: staff_home rotası Dashboard ile eşleşmeli
-                if (tab.route == "staff_home") {
-                    currentRoute.contains("staffDashboard", ignoreCase = true)
-                } else {
-                    currentRoute.contains(tab.route, ignoreCase = true)
-                }
+                // Eğer gelen rota tab rotasıyla tamamen aynıysa VEYA tab rotasını içeriyorsa
+                currentRoute == tab.route || currentRoute.contains(tab.route, ignoreCase = true)
             }
 
             IconButton(onClick = { onTabSelected(tab) }) {
