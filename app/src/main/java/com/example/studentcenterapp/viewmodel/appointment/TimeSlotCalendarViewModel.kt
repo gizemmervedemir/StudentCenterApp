@@ -2,9 +2,10 @@ package com.example.studentcenterapp.viewmodel.appointment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.studentcenterapp.data.AppDI
+import com.example.studentcenterapp.data.student.StudentSession
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepository
-import com.example.studentcenterapp.model.TimeSlot
-import com.example.studentcenterapp.viewmodel.appointment.TimeSlotCalendarUiState
+import com.example.studentcenterapp.model.Appointment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 class TimeSlotCalendarViewModel(
     private val repository: TimeSlotRepository,
@@ -28,10 +30,8 @@ class TimeSlotCalendarViewModel(
         loadSlots()
     }
 
-    // TimeSlotCalendarViewModel.kt içinde loadSlots fonksiyonuna log ekleyelim
     fun loadSlots() {
         viewModelScope.launch {
-            // serviceId'nin boş gelip gelmediğini kontrol edin
             if (serviceId.isBlank()) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Hatalı Hizmet Kimliği") }
                 return@launch
@@ -47,8 +47,6 @@ class TimeSlotCalendarViewModel(
                     }
                 }
                 .collect { slots ->
-                    // Filtreleme: Eğer repository tüm slotları dönüyorsa burada türe göre ayıklama gerekebilir.
-                    // Şu an tüm slotları tarihe göre grupluyoruz.
                     val grouped = try {
                         slots.groupBy { LocalDate.parse(it.date) }
                     } catch (e: Exception) {
@@ -67,41 +65,76 @@ class TimeSlotCalendarViewModel(
         }
     }
 
-    // Kullanıcı listeden bir tarih seçtiğinde
     fun onDateSelected(date: LocalDate) {
         _uiState.update { it.copy(selectedDate = date) }
     }
 
-    // Kullanıcı bir saat dilimine (slot) tıkladığında
     fun onSlotClicked(slotId: String) {
         _uiState.update { it.copy(selectedSlotId = slotId) }
     }
 
     /**
-     * Dialog içindeki "Onayla" butonuna basıldığında çağrılır.
+     * Appointment modelindeki (id, studentId, staffId, serviceId, timeSlotId, status)
+     * zorunlu alanlarını doldurarak Firebase'e kaydeder.
      */
-    fun confirmSelectedSlot(onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val selectedId = _uiState.value.selectedSlotId
-        if (selectedId == null) {
+    fun confirmSelectedSlot(
+        serviceName: String,
+        type: String, // "office" veya "online"
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val uiVal = _uiState.value
+        val selectedId = uiVal.selectedSlotId
+        val selectedSlot = uiVal.groupedSlots.values.flatten().find { it.id == selectedId }
+
+        val studentId = StudentSession.currentStudentId ?: "20230000000"
+        val studentName = "Öğrenci"
+
+        if (selectedId == null || selectedSlot == null) {
             onError("Lütfen bir saat dilimi seçin")
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val isSuccess = repository.reserveSlot(selectedId)
 
-            if (isSuccess) {
-                _uiState.update { it.copy(isLoading = false) }
-                onSuccess()
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Seçilen slot artık müsait değil."
-                    )
+            val isLocalSuccess = repository.reserveSlot(selectedId)
+
+            if (isLocalSuccess) {
+                val newAppointment = Appointment(
+                    id = UUID.randomUUID().toString(),
+                    studentId = studentId,
+                    studentName = studentName,
+                    staffId = "not_assigned",
+                    serviceName = serviceName,
+                    serviceId = serviceId,
+                    timeSlotId = selectedId,
+                    appointmentDate = selectedSlot.date,
+                    type = type,
+                    status = "pending",
+                    startTime = selectedSlot.startTime,
+                    endTime = selectedSlot.endTime
+                )
+
+                try {
+                    // ✅ HATALI SATIR DÜZELTİLDİ: upsertAppointment -> createAppointment
+                    // Repository interface'inde verdiğimiz ismi burada çağırmalıyız
+                    val result = AppDI.appointmentRepository.createAppointment(newAppointment)
+
+                    if (result.isSuccess) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        onSuccess()
+                    } else {
+                        _uiState.update { it.copy(isLoading = false) }
+                        onError("Randevu oluşturulamadı: ${result.exceptionOrNull()?.message}")
+                    }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onError("Veritabanı hatası: ${e.message}")
                 }
-                onError("Rezervasyon başarısız oldu.")
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+                onError("Seçilen slot artık müsait değil.")
             }
         }
     }

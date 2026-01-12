@@ -175,29 +175,20 @@ private fun AppointmentCardItem(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFBFBFB)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        // ... mevcut modifier ve shape
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
+                // serviceId yerine serviceName göster
                 Text(
-                    text = "Hizmet: ${appointment.serviceId}",
+                    text = appointment.serviceName.ifBlank { "Hizmet: ${appointment.serviceId}" },
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color.Black
+                    fontSize = 16.sp
                 )
                 Spacer(Modifier.height(4.dp))
+                // timeSlotId yerine appointmentDate ve startTime göster
                 Text(
-                    text = "Tarih: ${appointment.timeSlotId}",
+                    text = "${appointment.appointmentDate} - ${appointment.startTime}",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )

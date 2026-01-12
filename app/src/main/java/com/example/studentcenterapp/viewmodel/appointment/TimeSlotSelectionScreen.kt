@@ -1,13 +1,10 @@
 package com.example.studentcenterapp.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -32,6 +29,7 @@ import java.util.Locale
 @Composable
 fun TimeSlotSelectionScreen(
     serviceName: String,
+    appointmentType: String = "office", // Varsayılan olarak "office", navigasyondan da gelebilir
     viewModel: TimeSlotCalendarViewModel,
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
@@ -41,7 +39,7 @@ fun TimeSlotSelectionScreen(
     val state by viewModel.uiState.collectAsState()
     var showConfirmDialog by remember { mutableStateOf(false) }
 
-    // ✅ Değişkeni Scaffold dışında tanımlayarak scope hatasını çözüyoruz
+    // Seçili slotu state içinden buluyoruz
     val selectedSlot = remember(state.selectedSlotId, state.groupedSlots) {
         state.groupedSlots.values.flatten().find { it.id == state.selectedSlotId }
     }
@@ -57,7 +55,7 @@ fun TimeSlotSelectionScreen(
         containerColor = Color(0xFF4FC3F7)
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Geri Butonu
+            // Üst Navigasyon (Geri Butonu)
             IconButton(onClick = onBackClick, modifier = Modifier.padding(8.dp)) {
                 Icon(
                     imageVector = Icons.Default.ChevronLeft,
@@ -67,6 +65,7 @@ fun TimeSlotSelectionScreen(
                 )
             }
 
+            // İçerik Kartı
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.White,
@@ -95,7 +94,7 @@ fun TimeSlotSelectionScreen(
                         }
                     }
 
-                    // Alt Buton
+                    // Onaylama Butonu
                     Button(
                         onClick = { showConfirmDialog = true },
                         enabled = selectedSlot != null && !state.isLoading,
@@ -117,19 +116,22 @@ fun TimeSlotSelectionScreen(
         }
     }
 
-    // ✅ Onay Dialogu
+    // ✅ Onay Dialogu ve Firebase Kaydı
     if (showConfirmDialog && selectedSlot != null) {
         AppointmentConfirmDialog(
             serviceName = serviceName,
             slot = selectedSlot,
             onDismiss = { showConfirmDialog = false },
             onConfirm = {
+                // ViewModel artık bu parametreleri bekliyor
                 viewModel.confirmSelectedSlot(
+                    serviceName = serviceName,
+                    type = appointmentType,
                     onSuccess = {
                         showConfirmDialog = false
-                        onAppointmentCreated()
+                        onAppointmentCreated() // Success ekranına yönlendirir
                     },
-                    onError = { /* Opsiyonel: Toast veya Snackbar gösterimi */ }
+                    onError = { /* Hata yönetimi burada yapılabilir */ }
                 )
             }
         )
@@ -143,7 +145,6 @@ fun AppointmentConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    // Tarih formatlama (Görseldeki gibi: 20 Ekim, Pazartesi)
     val dateText = try {
         val date = LocalDate.parse(slot.date)
         date.format(DateTimeFormatter.ofPattern("dd MMMM, EEEE", Locale("tr")))
@@ -152,20 +153,12 @@ fun AppointmentConfirmDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        // Dış Kutu (Görseldeki koyu gri/siyahımsı arka plan efekti için)
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = Color(0xFFD1D1D1), // Kartın arka plan rengi
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+            color = Color(0xFFD1D1D1),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-            ) {
-                // Başlık: Tarih
+            Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
                 Text(
                     text = dateText,
                     fontSize = 20.sp,
@@ -175,90 +168,44 @@ fun AppointmentConfirmDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Saat Satırı
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.Schedule,
-                        contentDescription = null,
-                        tint = Color(0xFF333333),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(Icons.Outlined.Schedule, contentDescription = null, tint = Color(0xFF333333))
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = slot.startTime,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF333333)
-                    )
+                    Text(text = slot.startTime, fontSize = 18.sp, color = Color(0xFF333333))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Uzman ve Servis Satırı
                 Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Outlined.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF333333),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = Color(0xFF333333))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text(
-                            text = "Elif Yılmaz", // Örnek isim (Statik veya modelden gelebilir)
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF333333)
-                        )
-                        Text(
-                            text = serviceName,
-                            fontSize = 14.sp,
-                            color = Color(0xFF555555)
-                        )
+                        Text(text = "Uzman Personel", fontWeight = FontWeight.Medium)
+                        Text(text = serviceName, fontSize = 14.sp, color = Color(0xFF555555))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Butonlar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Onayla Butonu (Yeşil)
+                Row(modifier = Modifier.fillMaxWidth()) {
                     Button(
                         onClick = onConfirm,
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .height(50.dp),
+                        modifier = Modifier.weight(1.1f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33C29D)),
                         shape = RoundedCornerShape(25.dp)
                     ) {
-                        Text(
-                            "Onayla",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Onayla", color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // Geri Dön Butonu (Açık Gri)
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(0.9f)
-                            .height(50.dp),
+                        modifier = Modifier.weight(0.9f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEBEBEB)),
                         shape = RoundedCornerShape(25.dp)
                     ) {
-                        Text(
-                            "Geri Dön",
-                            color = Color(0xFF666666),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Geri Dön", color = Color(0xFF666666), fontWeight = FontWeight.Bold)
                     }
                 }
             }
