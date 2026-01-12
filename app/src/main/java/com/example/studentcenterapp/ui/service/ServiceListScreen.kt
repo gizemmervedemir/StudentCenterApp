@@ -37,16 +37,14 @@ fun ServiceListScreen(
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
     onServiceClick: (serviceId: String, serviceName: String) -> Unit,
-    onBackClick: () -> Unit, // Geri dönüş için yeni parametre
+    onBackClick: () -> Unit,
     onRetry: (() -> Unit)? = null
 ) {
     // Kaydırma durumunu saklamak için
     val scrollState = rememberScrollState()
 
     Scaffold(
-        topBar = {
-            AppTopBar(title = "")
-        },
+        topBar = { AppTopBar(title = "") },
         bottomBar = {
             AppBottomBar(tabs = bottomTabs, currentRoute = currentRoute, onTabSelected = onTabSelected)
         },
@@ -120,7 +118,7 @@ fun ServiceListScreen(
                                     color = DarkText
                                 )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 // Birim Açıklaması
                                 Text(
@@ -140,7 +138,6 @@ fun ServiceListScreen(
                                 text = "Randevu Al",
                                 onClick = { onServiceClick(service.id, service.name) },
                                 modifier = Modifier.align(Alignment.CenterHorizontally))
-                            )
                         }
                     }
                 }
@@ -149,6 +146,7 @@ fun ServiceListScreen(
     }
 }
 private fun ColumnScope.getDrawableResource(imageName: String?): Int {
+
     return when (imageName) {
         "ic_gelisim" -> R.drawable.ic_gelisim
         "ic_burs" -> R.drawable.ic_burs
