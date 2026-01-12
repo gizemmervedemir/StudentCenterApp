@@ -6,8 +6,5 @@ import kotlinx.coroutines.flow.Flow
 class DepartmentRepositoryImpl(
     private val dataSource: DepartmentDataSource
 ) : DepartmentRepository {
-
-    override fun getDepartments(): Flow<List<Department>> {
-        return dataSource.getDepartments()
-    }
+    override fun getDepartments(): Flow<List<Department>> = dataSource.getDepartments()
 }

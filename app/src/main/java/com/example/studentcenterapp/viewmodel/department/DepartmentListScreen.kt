@@ -164,7 +164,7 @@ private fun DepartmentListContent(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(state.data) { dep ->
+                        items(state.data, key = { it.id }) { dep ->
                             DepartmentRow(
                                 title = dep.name,
                                 isSelected = dep.name.contains("Psikolojik"),

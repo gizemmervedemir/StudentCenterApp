@@ -296,10 +296,16 @@ fun StudentCenterNavHost(
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
 
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
+                },
+                // İŞTE EKSİK OLAN SATIR BURASI:
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onRetry = {
+                    if (departmentId.isNotBlank()) vm.loadServices(departmentId)
                 }
             )
         }
-
         // ✅ TimeSlot flow graph
         timeSlotGraph(
             navController = navController,

@@ -6,5 +6,6 @@ data class TimeSlot(
     val date: String,
     val startTime: String,
     val endTime: String,
+    val type: String = "office",
     val isReserved: Boolean = false
 )
