@@ -5,6 +5,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -60,10 +61,15 @@ fun StudentCenterNavHost(
 
     // Merkezi Tab Geçiş Mantığı
     val navigateToTab: (AppTab) -> Unit = { tab ->
-        navController.navigate(tab.route) {
-            popUpTo(navController.graph.startDestinationId) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+        if (currentRoute != tab.route) { // Zaten o sayfadaysak tekrar yükleme yapma
+            navController.navigate(tab.route) {
+                // Stack'i temizleyerek döngüsel crashleri önler
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
     }
 
@@ -259,7 +265,9 @@ fun StudentCenterNavHost(
         }
 
         // --- Chat Routes ---
-        composable("chat") {
+        composable(route = Screen.Chat.route) {
+            // Alt barın bu rotayı tanıması için Screen.Chat.route'un
+            // AppTab.Chat içindeki rota ile aynı string olduğundan emin olun.
             ChatListScreen(
                 currentRoute = currentRoute,
                 onTabSelected = navigateToTab,
@@ -267,7 +275,6 @@ fun StudentCenterNavHost(
                 onNewChatClick = { /* New chat logic */ }
             )
         }
-
         composable(
             route = "chatDetail/{chatId}/{chatName}",
             arguments = listOf(
