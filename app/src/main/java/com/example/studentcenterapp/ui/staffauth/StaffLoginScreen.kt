@@ -1,27 +1,27 @@
 package com.example.studentcenterapp.ui.staffauth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.studentcenterapp.ui.common.AppTopBar
+import com.example.studentcenterapp.R
 import com.example.studentcenterapp.ui.common.ContentCard
 import com.example.studentcenterapp.ui.common.PrimaryButton
 import com.example.studentcenterapp.ui.state.UiState
-import com.example.studentcenterapp.ui.theme.PrimaryBlue
+import com.example.studentcenterapp.ui.theme.*
 
 @Composable
 fun StaffLoginScreen(
@@ -34,61 +34,158 @@ fun StaffLoginScreen(
     val state by vm.uiState.collectAsState()
     val navStaffId by vm.navStaffId.collectAsState()
 
+    // Başarılı giriş kontrolü
     if (navStaffId != null) {
         val id = navStaffId!!
         vm.consumeNav()
         onSuccess(id)
     }
 
-    Scaffold(
-        topBar = { AppTopBar(title = "Staff Login") },
-        containerColor = PrimaryBlue
-    ) { padding ->
-        ContentCard(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PrimaryBlue)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            // Logo Alanı (StudentLoginScreen ile aynı ölçülerde)
+            Spacer(modifier = Modifier.height(83.dp))
+            Image(
+                painter = painterResource(id = R.drawable.logo_oldx),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .width(173.dp)
+                    .height(118.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(27.dp))
+
+            // Beyaz Kart (ContentCard)
+            ContentCard(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 34.dp),
             ) {
-                Text("Welcome back", style = MaterialTheme.typography.titleLarge)
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = vm::onEmailChange,
-                    label = { Text("Email") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = vm::onPasswordChange,
-                    label = { Text("Password") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (state is UiState.Error) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 30.dp, vertical = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = (state as UiState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Giriş Yapın",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.align(Alignment.Start)
                     )
-                }
 
-                PrimaryButton(
-                    text = if (state is UiState.Loading) "Logging in..." else "Login",
-                    enabled = state !is UiState.Loading,
-                    onClick = vm::login
-                )
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                Spacer(Modifier.height(4.dp))
+                    // E-posta Input
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = vm::onEmailChange,
+                        label = {
+                            Text(
+                                "E-posta",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                ),
+                                modifier = Modifier.offset(y = (-5).dp)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = PrimaryBlue,
+                            unfocusedIndicatorColor = lightText,
+                            focusedLabelColor = PrimaryBlue,
+                            unfocusedLabelColor = lightText
+                        )
+                    )
 
-                TextButton(onClick = onSignupClick) {
-                    Text("Don’t have an account? Sign up")
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Şifre Input
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = vm::onPasswordChange,
+                        label = {
+                            Text(
+                                "Şifre",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                ),
+                                modifier = Modifier.offset(y = (-5).dp)
+                            )
+                        },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = PrimaryBlue,
+                            unfocusedIndicatorColor = lightText,
+                            focusedLabelColor = PrimaryBlue,
+                            unfocusedLabelColor = lightText
+                        )
+                    )
+
+                    // Hata Mesajı ve Şifremi Unuttum Satırı
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (state is UiState.Error) {
+                                Text(
+                                    text = (state as UiState.Error).message,
+                                    color = ErrorRed,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+
+                        TextButton(
+                            onClick = { /* Opsiyonel: Şifremi Unuttum Logic */ },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                text = "Şifremi Unuttum",
+                                color = PrimaryBlue,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(64.dp))
+
+                    // Giriş Yap Butonu (Mavi)
+                    PrimaryButton(
+                        text = if (state is UiState.Loading) "Giriş Yapılıyor..." else "Giriş Yap",
+                        enabled = state !is UiState.Loading,
+                        onClick = vm::login,
+                        modifier = Modifier
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Hesabınız yok mu?", color = lightText, style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Üye Ol Butonu (Yeşil)
+                    PrimaryButton(
+                        text = "Üye Ol",
+                        onClick = onSignupClick,
+                        modifier = Modifier,
+                        containerColor = PrimaryGreen
+                    )
                 }
             }
         }
