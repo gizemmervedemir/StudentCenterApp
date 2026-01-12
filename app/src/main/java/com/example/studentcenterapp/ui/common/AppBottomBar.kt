@@ -18,6 +18,8 @@ import com.example.studentcenterapp.ui.theme.PrimaryGreen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.studentcenterapp.R
+import com.example.studentcenterapp.navigation.Screen
+
 
 /**
  * Bottom Bar üzerindeki her bir sekmeyi temsil eden veri modeli.

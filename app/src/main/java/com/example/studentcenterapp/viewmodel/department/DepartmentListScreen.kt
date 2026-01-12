@@ -185,7 +185,7 @@ private fun DepartmentListContent(
                             items(filteredList, key = { it.id }) { dep ->
                                 DepartmentRow(
                                     title = dep.name.ifBlank { "İSİM EKSİK (ID: ${dep.id})" },
-                                    isSelected = false, // Veya kendi mantığını ekleyebilirsin
+                                    dep.name.contains("Bireysel"), //başta seçili gelsin diye biri.
                                     onClick = { onDepartmentClick(dep.id, dep.name) }
                                 )
                             }

@@ -20,4 +20,5 @@ val AppointmentOkColor = Color(0XFF4CAF50)
 val AdminAppointmentColor = Color(0XFFEE5B80)
 val GreyBox = Color(0XFFD9D9D9)
 val ButtonBackground = Color(0XFF1CA5D6)
+val ButtonStudentCalendar = Color(0XFF64BDDD)
 val BottomBarBackground = PrimaryBlue

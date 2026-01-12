@@ -9,7 +9,9 @@ data class Appointment(
     val departmentName: String = "",
     val serviceId: String,
     val timeSlotId: String,
-    val appointmentDate: String = "",
-    val type: String = "office", // "office" veya "online"
-    val status: String // "pending", "approved", "cancelled"
+    val appointmentDate: String = "", // Kolay sıralama ve görüntüleme için
+    val type: String = "office", // Online mı ofis mi?
+    val status: String,// "pending" | "approved" | "cancelled",
+    val startTime: String = "",
+    val endTime: String = ""
 )
