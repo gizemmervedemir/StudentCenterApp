@@ -1,18 +1,13 @@
 package com.example.studentcenterapp.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
@@ -32,6 +27,9 @@ import com.example.studentcenterapp.viewmodel.splash.SplashViewModel
 import com.example.studentcenterapp.viewmodel.student.*
 import com.example.studentcenterapp.ui.appointment.AppointmentDetailRoute
 import com.example.studentcenterapp.ui.student.PasswordResetSuccessScreen
+import com.example.studentcenterapp.ui.chat.ChatListScreen
+import com.example.studentcenterapp.ui.chat.ChatDetailScreen
+import com.example.studentcenterapp.ui.common.AppTab
 
 private const val ARG_STUDENT_ID = "studentId"
 
@@ -55,6 +53,19 @@ fun StudentCenterNavHost(
 ) {
     val timeSlotDataSource = remember { InMemoryDataSource() }
     val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
+
+    // ROTA TAKİBİ: Bottom Bar ikonlarının seçili gelmesini sağlar
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // Merkezi Tab Geçiş Mantığı
+    val navigateToTab: (AppTab) -> Unit = { tab ->
+        navController.navigate(tab.route) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -179,8 +190,8 @@ fun StudentCenterNavHost(
             DepartmentListScreen(
                 state = state,
                 userName = userName,
-                currentRoute = Screen.Departments.route,
-                onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
                 onDepartmentClick = { deptId, deptName ->
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(ConfirmationNavKeys.KEY_DEPARTMENT_NAME, deptName)
@@ -201,13 +212,12 @@ fun StudentCenterNavHost(
 
             ServiceListScreen(
                 state = state,
-                currentRoute = Screen.Services.route,
-                onTabSelected = { tab -> navController.navigate(tab.route) { launchSingleTop = true } },
-                onServiceClick = { serviceId, serviceName, type -> // type parametresi eklendi
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onServiceClick = { serviceId, serviceName, type ->
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_ID, serviceId)
                     handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
-                    // Seçilen randevu tipini SavedStateHandle'a kaydediyoruz
                     handle?.set("appointment_type", type)
 
                     navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
@@ -228,8 +238,6 @@ fun StudentCenterNavHost(
             val timeSlotId = prev?.get<String>(ConfirmationNavKeys.KEY_TIMESLOT_ID).orEmpty()
             val scheduledStartMillis = prev?.get<Long>(ConfirmationNavKeys.KEY_START_MILLIS) ?: 0L
             val dateTimeText = prev?.get<String>(ConfirmationNavKeys.KEY_DATE_TEXT).orEmpty()
-
-            // Kaydettiğimiz appointment_type bilgisini alıyoruz
             val appointmentType = prev?.get<String>("appointment_type") ?: "office"
 
             AppointmentConfirmationScreen(
@@ -240,8 +248,6 @@ fun StudentCenterNavHost(
                 timeSlotId = timeSlotId,
                 scheduledStartMillis = scheduledStartMillis,
                 dateTimeText = dateTimeText,
-                // Onay ekranına bu bilgiyi de paslıyoruz (Gerekirse)
-                // appointmentType = appointmentType,
                 factory = AppointmentConfirmationViewModelFactory(AppDI.appointmentRepository),
                 onBack = { navController.popBackStack() },
                 onSuccessNavigate = {
@@ -252,6 +258,36 @@ fun StudentCenterNavHost(
             )
         }
 
+        // --- Chat Routes ---
+        composable("chat") {
+            ChatListScreen(
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onChatClick = { id, name -> navController.navigate("chatDetail/$id/$name") },
+                onNewChatClick = { /* New chat logic */ }
+            )
+        }
+
+        composable(
+            route = "chatDetail/{chatId}/{chatName}",
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("chatName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId").orEmpty()
+            val chatName = backStackEntry.arguments?.getString("chatName").orEmpty()
+
+            ChatDetailScreen(
+                chatId = chatId,
+                chatTitle = chatName,
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // --- Appointment List & Detail ---
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
             arguments = listOf(navArgument(ARG_STUDENT_ID) { type = NavType.StringType; defaultValue = "" })
@@ -261,7 +297,11 @@ fun StudentCenterNavHost(
 
             AppointmentListScreen(
                 factory = factory,
-                onAppointmentClick = { id -> navController.navigate(Screen.AppointmentDetail.createRoute(id)) }
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onAppointmentClick = { id ->
+                    navController.navigate(Screen.AppointmentDetail.createRoute(id))
+                }
             )
         }
 
@@ -288,7 +328,6 @@ fun StudentCenterNavHost(
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
             val entry = backStackEntry.arguments?.getString("entry") ?: "staff"
 
-            // Yetkisiz erişim kontrolü
             if (staffId.isBlank() || entry != "staff") {
                 LaunchedEffect(Unit) {
                     navController.navigate(Screen.Welcome.route) {
@@ -315,20 +354,11 @@ fun StudentCenterNavHost(
                 onFilterChanged = { vm.onFilterChanged(it) },
                 actionLoading = actionLoading,
                 actionError = actionError,
-                currentRoute = "staffDashboard/{staffId}?entry={entry}", // BottomBar aktifliği için
-                onTabSelected = { tab ->
-                    navController.navigate(tab.route) { launchSingleTop = true }
-                },
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
                 onApprove = { vm.approve(it) },
                 onReject = { vm.reject(it) }
             )
         }
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(name: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "TODO: $name screen")
     }
 }

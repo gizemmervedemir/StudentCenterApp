@@ -7,8 +7,6 @@ sealed class Screen(val route: String) {
 
     object StudentLogin : Screen("student_login")
     object StudentSignup : Screen("student_signup")
-
-    // (Sende zaten departments'e gidiyor)
     object StudentHome : Screen("departments")
 
     object SignupSuccess : Screen("signup_success")
@@ -19,12 +17,12 @@ sealed class Screen(val route: String) {
 
     object Departments : Screen("departments")
     object Services : Screen("services")
+    object Chat : Screen("chat")
     object Slots : Screen("slots")
     object Confirm : Screen("confirm")
 
     object Appointments : Screen("appointments")
 
-    // ✅ NEW: Appointment detail route
     object AppointmentDetail : Screen("appointmentDetail/{appointmentId}") {
         fun createRoute(appointmentId: String): String = "appointmentDetail/$appointmentId"
     }
