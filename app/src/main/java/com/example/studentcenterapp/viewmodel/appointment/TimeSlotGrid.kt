@@ -1,17 +1,10 @@
 package com.example.studentcenterapp.viewmodel.appointment
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.studentcenterapp.model.TimeSlot
-import com.example.studentcenterapp.viewmodel.appointment.TimeSlotItem
 
 @Composable
 fun TimeSlotGrid(
@@ -20,19 +13,35 @@ fun TimeSlotGrid(
     onSlotClick: (TimeSlot) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(8.dp),
+    // Saatleri her satırda 3 adet olacak şekilde grupluyoruz (Görseldeki gibi)
+    val rows = slots.chunked(3)
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(slots) { slot ->
-            val isSelected = slot.id == selectedSlotId
+        rows.forEach { rowSlots ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowSlots.forEach { slot ->
+                    TimeSlotItem(
+                        slot = slot,
+                        isSelected = slot.id == selectedSlotId,
+                        onClick = { onSlotClick(slot) },
+                        modifier = Modifier.weight(1f) // Her kutucuk eşit genişlikte
+                    )
+                }
 
-            TimeSlotItem(
-                slot = slot,
-                isSelected = isSelected,
-                onClick = { onSlotClick(slot) }
-            )
+                // Eğer satırda 3'ten az eleman varsa (örn: son satırda 1 veya 2 slot kaldıysa)
+                // hizalamanın bozulmaması için boş weight ekliyoruz.
+                if (rowSlots.size < 3) {
+                    repeat(3 - rowSlots.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
         }
     }
 }

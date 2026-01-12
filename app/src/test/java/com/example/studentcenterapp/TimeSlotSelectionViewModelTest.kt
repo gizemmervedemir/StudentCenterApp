@@ -2,7 +2,6 @@ package com.example.studentcenterapp
 
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepository
 import com.example.studentcenterapp.model.TimeSlot
-import com.example.studentcenterapp.viewmodel.appointment.TimeSlotSelectionViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

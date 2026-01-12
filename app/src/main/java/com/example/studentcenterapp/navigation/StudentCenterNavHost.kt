@@ -14,7 +14,6 @@ import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
 import com.example.studentcenterapp.data.student.StudentSession
 import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
-import com.example.studentcenterapp.ui.confirmation.AppointmentConfirmationViewModelFactory
 import com.example.studentcenterapp.ui.screens.*
 import com.example.studentcenterapp.ui.service.*
 import com.example.studentcenterapp.ui.splash.*
@@ -55,8 +54,7 @@ fun StudentCenterNavHost(
     navController: NavHostController
 ) {
     val timeSlotDataSource = remember { InMemoryDataSource() }
-    val timeSlotRepository = remember { TimeSlotRepositoryImpl(timeSlotDataSource) }
-
+    val timeSlotRepository = AppDI.timeSlotRepository
     // ROTA TAKİBİ
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -291,15 +289,59 @@ fun StudentCenterNavHost(
                 currentRoute = currentRoute,
                 onTabSelected = navigateToTab,
                 onServiceClick = { serviceId, serviceName, type ->
-                    val handle = navController.currentBackStackEntry?.savedStateHandle
-                    handle?.set(ConfirmationNavKeys.KEY_SERVICE_ID, serviceId)
-                    handle?.set(ConfirmationNavKeys.KEY_SERVICE_NAME, serviceName)
-                    handle?.set("appointment_type", type)
-
-                    navController.navigate(TimeSlotDestinations.timeSlotSelectionRoute(serviceId))
+                    // ✅ HATA GİDERİLDİ: serviceName ve type parametreleri eklendi
+                    navController.navigate(
+                        TimeSlotDestinations.timeSlotSelectionRoute(serviceId, serviceName, type)
+                    )
                 },
                 onBackClick = { navController.popBackStack() },
                 onRetry = { vm.loadServices(departmentId) }
+            )
+        }
+
+        // --- YENİ: Time Slot Seçimi ve Randevu Onay Akışı ---
+        composable(
+            route = "${TimeSlotDestinations.ROUTE_TIME_SLOT_SELECTION}/{serviceId}/{serviceName}/{type}",
+            arguments = listOf(
+                navArgument("serviceId") { type = NavType.StringType },
+                navArgument("serviceName") { type = NavType.StringType },
+                navArgument("type") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val serviceId = backStackEntry.arguments?.getString("serviceId").orEmpty()
+            val serviceName = backStackEntry.arguments?.getString("serviceName").orEmpty()
+            val type = backStackEntry.arguments?.getString("type").orEmpty()
+
+            // ✅ HATA GİDERİLDİ: ViewModel burada oluşturuluyor
+            val vm: TimeSlotCalendarViewModel = viewModel(
+                factory = TimeSlotCalendarViewModelFactory(timeSlotRepository, serviceId)
+            )
+
+            TimeSlotSelectionScreen(
+                serviceName = serviceName, // Screen sadece serviceName bekliyor (güncellediğimiz koda göre)
+                viewModel = vm,            // ViewModel parametresi eklendi
+                currentRoute = currentRoute,
+                onTabSelected = navigateToTab,
+                onBackClick = { navController.popBackStack() },
+                onAppointmentCreated = {
+                    navController.navigate("appointmentSuccess") {
+                        popUpTo("${TimeSlotDestinations.ROUTE_TIME_SLOT_SELECTION}/$serviceId/$serviceName/$type") {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
+        }
+
+        composable("appointmentSuccess") {
+            // Görselin en sağındaki "Randevunuz oluşturulmuştur" ekranı
+            AppointmentSuccessScreen(
+                onNavigateToAppointments = {
+                    val studentId = StudentSession.currentStudentId ?: ""
+                    navController.navigate("${Screen.Appointments.route}?studentId=$studentId") {
+                        popUpTo("appointmentSuccess") { inclusive = true }
+                    }
+                }
             )
         }
 
