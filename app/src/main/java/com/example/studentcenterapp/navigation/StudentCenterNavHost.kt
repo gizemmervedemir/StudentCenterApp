@@ -1,8 +1,12 @@
 package com.example.studentcenterapp.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -32,6 +36,12 @@ import com.example.studentcenterapp.ui.chat.ChatDetailScreen
 import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.studentBottomTabs
 import com.example.studentcenterapp.ui.common.staffBottomTabs
+import com.example.studentcenterapp.ui.profile.PersonalInfoScreen
+import com.example.studentcenterapp.ui.profile.ProfileScreen
+import com.example.studentcenterapp.ui.profile.UpdateSuccessScreen
+import com.example.studentcenterapp.viewmodel.profile.ProfileUiState
+import com.example.studentcenterapp.viewmodel.profile.ProfileViewModel
+import com.example.studentcenterapp.viewmodel.profile.ProfileViewModelFactory
 
 private const val ARG_STUDENT_ID = "studentId"
 
@@ -254,6 +264,68 @@ fun StudentCenterNavHost(
 ////            )
 //        }
 
+        // --- PROFILE FLOW ---
+
+// 1. Ana Profil Ekranı
+        composable(Screen.StudentProfile.route) {
+            println("DEBUG: Profil ekranına girilmeye çalışılıyor!")
+            val profileVm: ProfileViewModel = viewModel(
+                factory = ProfileViewModelFactory(AppDI.studentRepository, AppDI.staffRepository)
+            )
+
+            // isUserStaff değişkenini burada kullanıyoruz
+            val userId = if (isUserStaff) staffIdFromArgs ?: "" else StudentSession.currentStudentId
+
+            LaunchedEffect(userId) {
+                profileVm.loadProfile(userId, isUserStaff)
+            }
+
+            when (val state = profileVm.uiState) {
+                is ProfileUiState.Success -> {
+                    ProfileScreen(
+                        userName = state.name,
+                        userEmail = state.email,
+                        isUserStaff = isUserStaff, // Eklendi
+                        currentRoute = currentRoute,
+                        onTabSelected = navigateToTab,
+                        onNavigateToPersonalInfos = { navController.navigate("personalInfo") },
+                        onLogout = {
+                            profileVm.logout {
+                                navController.navigate(Screen.Welcome.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+                is ProfileUiState.Loading -> { Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                    Text("Veriler Yükleniyor...")
+                } }
+                is ProfileUiState.Error -> { Text("Hata: ${state.message}") }
+            }
+        }
+// 2. Kişisel Bilgiler Formu
+        composable("personalInfo") {
+            PersonalInfoScreen(
+                onBackClick = { navController.popBackStack() },
+                onUpdateClick = {
+                    // Güncelleme mantığı ViewModel'e eklenecek
+                    navController.navigate("updateSuccess")
+                }
+            )
+        }
+
+// 3. Güncelleme Başarılı Ekranı
+        composable("updateSuccess") {
+            UpdateSuccessScreen(
+                onProfileClick = {
+                    navController.navigate(Screen.StudentProfile.route) {
+                        popUpTo("personalInfo") { inclusive = true }
+                    }
+                }
+            )
+        }
         // --- Student Flow ---
         // --- Student Flow (Departments, Services, Appointments) ---
         composable(Screen.Departments.route) {

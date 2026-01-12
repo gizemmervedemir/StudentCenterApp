@@ -26,6 +26,9 @@ object AppDI {
         FirestoreAppointmentDataSource()
     }
 
+
+
+    // --- 2. Repositories (Depolar) ---
     // --- 2. Depolar (Repositories) ---
 
     val departmentRepository: DepartmentRepository by lazy {
@@ -37,8 +40,7 @@ object AppDI {
     }
 
     val studentRepository: StudentRepository by lazy {
-        // Student verileri şu an için InMemory, Firestore'a geçirmek istersen değiştirilebilir
-        StudentRepositoryImpl(InMemoryStudentDataSource())
+        StudentRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
     // ✅ Firebase Randevu İşlemleri
@@ -47,7 +49,7 @@ object AppDI {
     }
 
     val staffRepository: StaffRepository by lazy {
-        StaffRepositoryImpl(appointmentFirestoreDataSource)
+        StaffRepositoryImpl(FirebaseFirestore.getInstance())
     }
 
     val chatRepository: ChatRepository by lazy {

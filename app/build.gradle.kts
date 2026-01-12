@@ -56,16 +56,22 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material)
     implementation(libs.places)
-
+//    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+//    implementation("com.google.firebase:firebase-storage")
+//    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
     // Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+//    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     // Auth ve Firestore
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
+//    implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.firebase.storage.ktx)
 
 
 
