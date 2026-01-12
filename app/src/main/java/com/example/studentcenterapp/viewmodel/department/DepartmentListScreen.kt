@@ -166,8 +166,8 @@ private fun DepartmentListContent(
                     ) {
                         items(state.data, key = { it.id }) { dep ->
                             DepartmentRow(
-                                title = dep.name,
-                                isSelected = dep.name.contains("Psikolojik"),
+                                title = dep.name.ifBlank { "İSİM EKSİK (ID: ${dep.id})" },
+                                isSelected = dep.name.contains("Bireysel"),
                                 onClick = {onDepartmentClick(dep.id, dep.name)}
                             )
                         }

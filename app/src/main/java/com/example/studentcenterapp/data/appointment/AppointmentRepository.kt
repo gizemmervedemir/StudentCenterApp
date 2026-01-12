@@ -1,13 +1,13 @@
 package com.example.studentcenterapp.data.appointment
 
+import com.example.studentcenterapp.model.Appointment // Senin asıl modelini import ediyoruz
 import kotlinx.coroutines.flow.Flow
 
 interface AppointmentRepository {
-    fun getAppointmentsForStudent(studentId: String): Flow<List<AppointmentRecord>>
+    // Tüm dönüş tiplerini Appointment olarak güncelledik
+    fun getAppointmentsForStudent(studentId: String): Flow<List<Appointment>>
 
-    // ✅ NEW: Detail ekranı için ID ile tek randevu
-    fun getAppointmentById(appointmentId: String): Flow<AppointmentRecord?>
-
+    fun getAppointmentById(appointmentId: String): Flow<Appointment?>
 
     suspend fun createAppointment(
         studentId: String,
@@ -18,16 +18,3 @@ interface AppointmentRepository {
 
     suspend fun cancelAppointment(appointmentId: String): Result<Unit>
 }
-
-/**
- * Domain/model sınıfına dokunmadan ilerlemek için basit record.
- * (İstersen sonra model.Appointment ile değiştirirsin.)
- */
-data class AppointmentRecord(
-    val id: String,
-    val studentId: String,
-    val serviceId: String,
-    val timeSlotId: String,
-    val scheduledStartMillis: Long,
-    val status: String
-)

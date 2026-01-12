@@ -31,7 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.studentcenterapp.data.appointment.AppointmentRecord
+import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.appointments.AppointmentListFilter
 import com.example.studentcenterapp.ui.common.AppTopBar
 import com.example.studentcenterapp.ui.common.ErrorView
@@ -137,7 +137,7 @@ private fun FilterRow(
  */
 @Composable
 private fun AppointmentCardItem(
-    appointment: AppointmentRecord,
+    appointment: Appointment,
     onClick: () -> Unit
 ) {
     Card(

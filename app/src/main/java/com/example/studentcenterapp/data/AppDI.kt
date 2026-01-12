@@ -1,35 +1,22 @@
 package com.example.studentcenterapp.data
 
-import com.example.studentcenterapp.data.auth.FakeStaffAuthRepository
+import com.example.studentcenterapp.data.auth.FirebaseAuthStaffAuthRepository // Yeni yaratacağımız
 import com.example.studentcenterapp.data.auth.StaffAuthRepository
-import com.example.studentcenterapp.data.department.DepartmentRepository
-import com.example.studentcenterapp.data.department.DepartmentRepositoryImpl
-import com.example.studentcenterapp.data.department.InMemoryDepartmentDataSource
-import com.example.studentcenterapp.data.service.InMemoryServiceDataSource
-import com.example.studentcenterapp.data.service.ServiceRepository
-import com.example.studentcenterapp.data.service.ServiceRepositoryImpl
-import com.example.studentcenterapp.data.staff.InMemoryAppointmentAdminDataSource
-import com.example.studentcenterapp.data.staff.StaffRepository
-import com.example.studentcenterapp.data.staff.StaffRepositoryImpl
-import com.example.studentcenterapp.data.student.InMemoryStudentDataSource
-import com.example.studentcenterapp.data.student.StudentRepository
-import com.example.studentcenterapp.data.student.StudentRepositoryImpl
-
-// ✅ Appointment
-import com.example.studentcenterapp.data.appointment.AppointmentRepository
-import com.example.studentcenterapp.data.appointment.AppointmentRepositoryImpl
-import com.example.studentcenterapp.data.appointment.InMemoryAppointmentDataSource
-import com.example.studentcenterapp.data.department.DepartmentDataSource
-import com.example.studentcenterapp.data.department.FirestoreDepartmentDataSource
-import com.example.studentcenterapp.data.service.FirestoreServiceDataSource
-import com.example.studentcenterapp.data.service.ServiceDataSource
+import com.example.studentcenterapp.data.department.*
+import com.example.studentcenterapp.data.service.*
+import com.example.studentcenterapp.data.staff.*
+import com.example.studentcenterapp.data.student.*
+import com.example.studentcenterapp.data.appointment.*
 
 object AppDI {
 
+    // 1. DataSources (Gerçek Veri Kaynakları)
     private val departmentDataSource: DepartmentDataSource = FirestoreDepartmentDataSource()
     private val serviceDataSource: ServiceDataSource = FirestoreServiceDataSource()
+    private val appointmentFirestoreDataSource = FirestoreAppointmentDataSource()
+    // Not: StudentDataSource için de Firestore versiyonu gerekirse ekleyeceğiz.
 
-    // 2. Orta katman: Repository (DataSource'u içine alıyor)
+    // 2. Repositories
     val departmentRepository: DepartmentRepository by lazy {
         DepartmentRepositoryImpl(departmentDataSource)
     }
@@ -38,20 +25,25 @@ object AppDI {
         ServiceRepositoryImpl(serviceDataSource)
     }
 
+    // Burayı da Firestore tabanlı yapmalıyız
     val studentRepository: StudentRepository by lazy {
-        StudentRepositoryImpl(InMemoryStudentDataSource())
+        StudentRepositoryImpl(InMemoryStudentDataSource()) // TODO: FirestoreStudentDataSource yaratılmalı
     }
 
+    // PERSONEL DÜNYASI (GÜNCEL)
     val staffRepository: StaffRepository by lazy {
-        StaffRepositoryImpl(InMemoryAppointmentAdminDataSource())
+        StaffRepositoryImpl(appointmentFirestoreDataSource)
     }
 
+    // AUTH (GÜNCEL)
+
+    // 1. Repository Tanımları
     val staffAuthRepository: StaffAuthRepository by lazy {
-        FakeStaffAuthRepository()
+        FirebaseAuthStaffAuthRepository()
     }
 
-    // ✅ Appointment repository (Confirm + Appointments list için kullanılacak)
     val appointmentRepository: AppointmentRepository by lazy {
-        AppointmentRepositoryImpl(InMemoryAppointmentDataSource())
+        // Hem personel hem öğrenci artık aynı Firestore motorunu kullanıyor
+        AppointmentRepositoryImpl(appointmentFirestoreDataSource)
     }
 }
