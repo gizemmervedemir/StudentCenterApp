@@ -1,5 +1,6 @@
 package com.example.studentcenterapp.ui.profile
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,7 +35,7 @@ import com.example.studentcenterapp.ui.theme.PrimaryBlue
 @Composable
 fun ProfileHeader(
     userName: String,
-    userEmail: String, // Email parametresini de ekleyelim, tasarımda vardı
+    imageUri: Uri?,
     onImageClick: () -> Unit // String değil, fonksiyon olmalı
 ) {
     Box(
@@ -65,12 +66,6 @@ fun ProfileHeader(
                 fontFamily = Figtree
             )
 
-            Text(
-                text = userEmail,
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                fontFamily = Figtree
-            )
             Spacer(modifier = Modifier.height(20.dp))
 
             // Profil Fotoğrafı ve Kamera İkonu

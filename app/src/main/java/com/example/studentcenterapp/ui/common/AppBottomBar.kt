@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -35,10 +36,10 @@ data class AppTab(
  * Gereksiz kod tekrarını önler.
  */
 private fun createTabs(homeRoute: String) = listOf(
-    AppTab(route = homeRoute, iconRes = R.drawable.material_symbols_home_rounded, contentDescription = "Home"),
+    AppTab(route = homeRoute, iconRes = R.drawable.home_new, contentDescription = "Home"),
     AppTab(route = Screen.StudentCalendar.route, iconRes = R.drawable.solar_calendar_bold, contentDescription = "Calendar"),
     AppTab(route = Screen.Chat.route, iconRes = R.drawable.mynaui_message_solid, contentDescription = "Messages"),
-    AppTab(route = Screen.StudentProfile.route, iconRes = R.drawable.qlementine_icons_user_16, contentDescription = "Profile")
+    AppTab(route = Screen.StudentProfile.route, iconRes = R.drawable.outline_account_circle_24, contentDescription = "Profile")
 )
 
 // Mevcut NavHost yapını bozmamak için bu değişkenleri dışarıya açık bırakıyoruz
@@ -76,7 +77,8 @@ fun AppBottomBar(
                     painter = painterResource(id = tab.iconRes),
                     contentDescription = tab.contentDescription,
                     // Seçiliyse Yeşil (PrimaryGreen), değilse Beyaz
-                    tint = if (isSelected) PrimaryGreen else Color.White
+                    tint = if (isSelected) PrimaryGreen else Color.White,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }

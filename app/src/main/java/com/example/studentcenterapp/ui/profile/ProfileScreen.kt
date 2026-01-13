@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -28,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.navigation.NavHostController
 import com.example.studentcenterapp.ui.common.AppBottomBar
 import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.staffBottomTabs
@@ -40,9 +43,11 @@ fun ProfileScreen(
     userEmail: String,
     isUserStaff: Boolean,
     onNavigateToPersonalInfos: () -> Unit,
+    onNavigateToPasswordUpdate: () -> Unit, // Bunu ekle
     onLogout: () -> Unit,
     currentRoute: String?,
-    onTabSelected: (AppTab) -> Unit
+    navController: NavHostController,
+    onTabSelected: (AppTab) -> Unit,
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -55,8 +60,13 @@ fun ProfileScreen(
         }
     }
 
+    // Header + overlap ayarları
+    val headerHeight = 260.dp
+    val avatarSize = 110.dp
+    val overlap = (avatarSize / 2) + 28.dp  // card, avatarın yarısına kadar header’a binsin
+
     Scaffold(
-        containerColor = PrimaryBlue, // ✅ arka plan mavi sabit
+        containerColor = PrimaryBlue,
         bottomBar = {
             AppBottomBar(
                 tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
@@ -66,19 +76,23 @@ fun ProfileScreen(
         }
     ) { padding ->
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(PrimaryBlue)
         ) {
-            // ✅ Header alanına alttan ekstra boşluk: avatar aşağı taşsın
+
+            // ✅ HEADER (zIndex yüksek: avatar kesin önde kalsın)
             Box(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(headerHeight)
+                    .zIndex(2f)
             ) {
                 ProfileHeader(
                     userName = userName,
-                    userEmail = userEmail,
+                    imageUri = selectedImageUri,
                     onImageClick = {
                         photoPickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -87,22 +101,20 @@ fun ProfileScreen(
                 )
             }
 
-            // ✅ Kartı yukarı çek: avatarın “üstüne yapışmış” gibi dursun
+            // ✅ CARD (header'a bindiriyoruz)
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset(y = (-28).dp),   // <-- burayı 20-40 dp arası ayarlayabilirsin
+                    .padding(top = headerHeight - overlap)
+                    .zIndex(1f),
                 color = Color(0xFFF2F2F2),
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(
-                            top = 40.dp,
-                            start = 20.dp,
-                            end = 20.dp
-                        ) // <-- yukarı çıktığı için biraz top padding verdik
+                        // Avatar card'ın üstüne bindiği için içerik aşağıdan başlasın
+                        .padding(top = overlap + 24.dp, start = 20.dp, end = 20.dp)
                 ) {
                     ProfileMenuItem(
                         icon = Icons.Default.Person,
@@ -112,12 +124,11 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.Lock,
                         title = "Şifre Değiştir",
-                        onClick = { /* TODO */ }
+                        onClick = onNavigateToPasswordUpdate
                     )
                     ProfileMenuItem(
-                        icon = Icons.Default.ExitToApp,
+                        icon = Icons.AutoMirrored.Filled.ExitToApp,
                         title = "Oturumu Kapat",
-                        textColor = Color.Red,
                         onClick = onLogout
                     )
                 }

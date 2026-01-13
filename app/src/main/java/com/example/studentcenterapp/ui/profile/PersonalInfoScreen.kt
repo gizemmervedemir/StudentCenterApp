@@ -1,6 +1,9 @@
 package com.example.studentcenterapp.ui.profile
 
 import android.graphics.drawable.Icon
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,62 +25,204 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.studentcenterapp.data.student.StudentSession
+import com.example.studentcenterapp.ui.common.ContentCard
+import com.example.studentcenterapp.ui.common.PrimaryButton
+import com.example.studentcenterapp.ui.student.SignupTextField
 import com.example.studentcenterapp.ui.theme.Figtree
 import com.example.studentcenterapp.ui.theme.PrimaryBlue
+import java.util.Calendar
+import com.example.studentcenterapp.R
 
 @Composable
 fun PersonalInfoScreen(
+    profileVm: com.example.studentcenterapp.viewmodel.profile.ProfileViewModel,
     onBackClick: () -> Unit,
-    onUpdateClick: () -> Unit
+    onUpdateSuccessNavigate: () -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
     var day by remember { mutableStateOf("") }
     var month by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    var showDatePicker by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState()
+
+    // Takvim Dialogu
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val calendar = Calendar.getInstance().apply { timeInMillis = millis }
+                        day = calendar.get(Calendar.DAY_OF_MONTH).toString()
+                        month = (calendar.get(Calendar.MONTH) + 1).toString()
+                        year = calendar.get(Calendar.YEAR).toString()
+                    }
+                    showDatePicker = false
+                }) { Text("Tamam") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("İptal") }
+            }
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "Geri")
-            }
-            Text(
-                "Kişisel Bilgiler",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = Figtree,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-            )
+            DatePicker(state = datePickerState)
         }
+    }
 
-        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            ProfileFormTextField(value = name, label = "Ad Soyad", onValueChange = { name = it })
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PrimaryBlue)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Logo
+            Image(
+                painter = painterResource(id = R.drawable.logo_oldx),
+                contentDescription = "Logo",
+                modifier = Modifier.size(width = 94.dp, height = 64.dp)
+            )
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProfileFormTextField(modifier = Modifier.weight(1.5f), value = year, label = "Yıl", onValueChange = { year = it })
-                ProfileFormTextField(modifier = Modifier.weight(1f), value = day, label = "Gün", onValueChange = { day = it })
-                ProfileFormTextField(modifier = Modifier.weight(1f), value = month, label = "Ay", onValueChange = { month = it })
-            }
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+            ContentCard(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 27.dp, vertical = 34.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Header (Geri Butonu ve Başlık)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = "Geri",
+                            tint = Color(0xFF707070),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .clickable { onBackClick() }
+                                .size(24.dp)
+                        )
 
-            Button(
-                onClick = onUpdateClick,
-                shape = RoundedCornerShape(25.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                modifier = Modifier.fillMaxWidth().height(50.dp)
-            ) {
-                Text("Güncelle", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Kişisel Bilgiler",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    // Ad Soyad Field
+                    SignupTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = "Ad Soyad"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Doğum Tarihi Seçici (Tıklanabilir Row)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            SignupTextField(
+                                value = year,
+                                onValueChange = {},
+                                label = "Doğum Yılı",
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.weight(2f)
+                            )
+                            SignupTextField(
+                                value = day,
+                                onValueChange = {},
+                                label = "Gün",
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.weight(1f)
+                            )
+                            SignupTextField(
+                                value = month,
+                                onValueChange = {},
+                                label = "Ay",
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        // Görünmez katman takvimi açar
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { showDatePicker = true }
+                        )
+                    }
+
+                    if (error != null) {
+                        Text(
+                            text = error!!,
+                            color = Color.Red,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(50.dp))
+
+                    // Güncelle Butonu (PrimaryButton kullanarak)
+                    PrimaryButton(
+                        text = if (loading) "Güncelleniyor..." else "Güncelle",
+                        onClick = {
+                            error = null
+                            val id = StudentSession.currentStudentId
+
+                            if (id.isBlank()) {
+                                error = "Oturum bulunamadı."
+                                return@PrimaryButton
+                            }
+                            if (fullName.isBlank() || year.isBlank()) {
+                                error = "Lütfen alanları doldurun."
+                                return@PrimaryButton
+                            }
+
+                            loading = true
+                            profileVm.updatePersonalInfo(
+                                id = id,
+                                fullName = fullName,
+                                birthDay = day,
+                                birthMonth = month,
+                                birthYear = year
+                            ) { ok ->
+                                loading = false
+                                if (ok) onUpdateSuccessNavigate()
+                                else error = "Güncelleme başarısız."
+                            }
+                        },
+                    )
+                }
             }
         }
     }

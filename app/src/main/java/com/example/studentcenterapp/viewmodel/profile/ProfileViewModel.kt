@@ -60,9 +60,69 @@ class ProfileViewModel(
         storageRef.putFile(imageUri).addOnSuccessListener {
             storageRef.downloadUrl.addOnSuccessListener { url ->
                 // Resim URL'sini Firestore'da kullanıcının dökümanına kaydet
-                FirebaseFirestore.getInstance().collection("students").document(id)
+                FirebaseFirestore.getInstance().collection("users").document(id)
                     .update("profilePictureUrl", url.toString())
             }
+        }
+    }
+    fun updatePersonalInfo(
+        id: String,
+        fullName: String,
+        birthDay: String,
+        birthMonth: String,
+        birthYear: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                // ✅ SENDE "users" var demiştin
+                FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(id)
+                    .update(
+                        mapOf(
+                            "fullName" to fullName,
+                            "birthDay" to birthDay,
+                            "birthMonth" to birthMonth,
+                            "birthYear" to birthYear
+                        )
+                    )
+                    .addOnSuccessListener { onComplete(true) }
+                    .addOnFailureListener { onComplete(false) }
+
+            } catch (_: Exception) {
+                onComplete(false)
+            }
+        }
+    }
+    fun updatePassword(
+        oldPassword: String,
+        newPassword: String,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        val email = user?.email
+
+        if (user != null && email != null) {
+            // 1. Adım: Kullanıcının kimliğini eski şifreyle doğrula (Re-authentication)
+            val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, oldPassword)
+
+            user.reauthenticate(credential)
+                .addOnSuccessListener {
+                    // 2. Adım: Doğrulama başarılıysa yeni şifreyi güncelle
+                    user.updatePassword(newPassword)
+                        .addOnSuccessListener {
+                            onResult(true, null)
+                        }
+                        .addOnFailureListener { e ->
+                            onResult(false, "Şifre güncelleme hatası: ${e.localizedMessage}")
+                        }
+                }
+                .addOnFailureListener {
+                    onResult(false, "Eski şifre yanlış.")
+                }
+        } else {
+            onResult(false, "Kullanıcı oturumu bulunamadı.")
         }
     }
 }
