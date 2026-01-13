@@ -19,8 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.studentcenterapp.model.Conversation
 import com.example.studentcenterapp.ui.common.AppBottomBar
 import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.AppTopBar
@@ -32,13 +30,12 @@ import java.util.*
 fun ChatListScreen(
     tabs: List<AppTab>,
     currentRoute: String?,
-    isStaff: Boolean, // Personel mi öğrenci mi bilgisi
+    isStaff: Boolean,
     onTabSelected: (AppTab) -> Unit,
     onChatClick: (String, String) -> Unit,
     onNewChatClick: () -> Unit,
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.Factory)
+    viewModel: ChatViewModel // Default parametre (viewModel = ...) kaldırıldı
 ) {
-    // ViewModel içindeki StateFlow'u dinliyoruz
     val conversations by viewModel.conversations.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 

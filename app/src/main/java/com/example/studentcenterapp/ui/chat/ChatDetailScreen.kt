@@ -18,8 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.studentcenterapp.data.student.StudentSession
 import com.example.studentcenterapp.ui.common.AppBottomBar
 import com.example.studentcenterapp.ui.common.AppTab
 import com.example.studentcenterapp.ui.common.AppTopBar
@@ -27,49 +25,47 @@ import com.example.studentcenterapp.viewmodel.chat.ChatViewModel
 
 @Composable
 fun ChatDetailScreen(
-    tabs: List<AppTab>, // NavHost'tan gelen rol tabanlı liste
+    tabs: List<AppTab>,
     chatId: String,
-    chatTitle: String,
+    chatTitle: String, // Bu zaten öğrenci ismi (studentName) olarak geliyor
     currentRoute: String?,
+    currentUserId: String,
+    // EKLENEN PARAMETRELER:
+    studentId: String,
+    serviceName: String,
     onTabSelected: (AppTab) -> Unit,
     onBackClick: () -> Unit,
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.Factory)
-) {
+    viewModel: ChatViewModel
+){
     val messages by viewModel.messages.collectAsState()
     var messageText by remember { mutableStateOf("") }
-
-    // Mevcut kullanıcının ID'sini al (Öğrenci veya Personel olabilir)
-    // Eğer StudentSession boşsa personel ID'sine bakacak bir mantık eklenebilir
-    val currentUserId = StudentSession.currentStudentId
 
     LaunchedEffect(chatId) { viewModel.loadMessages(chatId) }
 
     Scaffold(
         bottomBar = {
             AppBottomBar(
-                tabs = tabs, // Statik liste yerine parametre gelen liste
+                tabs = tabs,
                 currentRoute = currentRoute,
                 onTabSelected = onTabSelected
             )
         },
-        containerColor = Color(0xFF4FC3F7) // Üst bar mavisi
+        containerColor = Color(0xFF4FC3F7)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Logo veya Üst Bar Alanı
             AppTopBar(title = "")
 
-            // Mesajlaşma Alanı (Beyaz Panel)
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color(0xFFF5F5F5),
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             ) {
                 Column {
-                    // Chat Header (Geri butonu ve Kişi bilgisi)
+                    // Chat Header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -105,7 +101,7 @@ fun ChatDetailScreen(
                         items(messages) { message ->
                             MessageBubble(
                                 text = message.text,
-                                // Eğer gönderen bendeysem sağa yasla
+                                // currentUserId NavHost'tan doğru geldiği sürece "Benim" mesajlarım sağda görünür
                                 isMe = message.senderId == currentUserId
                             )
                         }
@@ -117,7 +113,14 @@ fun ChatDetailScreen(
                         onValueChange = { messageText = it },
                         onSendClick = {
                             if (messageText.isNotBlank()) {
-                                viewModel.sendMessage(chatId, messageText)
+                                // ViewModel'deki yeni sendMessage yapısına uygun çağrı:
+                                viewModel.sendMessage(
+                                    conversationId = chatId,
+                                    text = messageText,
+                                    studentId = studentId,
+                                    studentName = chatTitle, // chatTitle zaten öğrenci adı
+                                    serviceName = serviceName
+                                )
                                 messageText = ""
                             }
                         }
@@ -127,6 +130,8 @@ fun ChatDetailScreen(
         }
     }
 }
+
+// ... MessageBubble ve ChatInputArea fonksiyonları aynı kalabilir ...
 
 @Composable
 fun MessageBubble(text: String, isMe: Boolean) {

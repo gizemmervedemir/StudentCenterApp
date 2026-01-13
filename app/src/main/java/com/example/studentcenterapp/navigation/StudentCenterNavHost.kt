@@ -17,7 +17,6 @@ import androidx.navigation.navArgument
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.inmemory.InMemoryDataSource
 import com.example.studentcenterapp.data.student.StudentSession
-import com.example.studentcenterapp.data.timeslot.TimeSlotRepositoryImpl
 import com.example.studentcenterapp.ui.screens.*
 import com.example.studentcenterapp.ui.service.*
 import com.example.studentcenterapp.ui.splash.*
@@ -39,6 +38,7 @@ import com.example.studentcenterapp.ui.common.staffBottomTabs
 import com.example.studentcenterapp.ui.profile.PersonalInfoScreen
 import com.example.studentcenterapp.ui.profile.ProfileScreen
 import com.example.studentcenterapp.ui.profile.UpdateSuccessScreen
+import com.example.studentcenterapp.viewmodel.chat.ChatViewModel
 import com.example.studentcenterapp.viewmodel.profile.ProfileUiState
 import com.example.studentcenterapp.viewmodel.profile.ProfileViewModel
 import com.example.studentcenterapp.viewmodel.profile.ProfileViewModelFactory
@@ -460,38 +460,62 @@ fun StudentCenterNavHost(
             )
         }
 
-        // --- Chat Routes (Ortak Ekran Yönetimi) ---
+// --- Chat Routes (Ortak Ekran Yönetimi) ---
+
+// 1. MESAJ LİSTESİ EKRANI
         composable(route = Screen.Chat.route) {
+            // Mevcut kullanıcının ID'sini belirle (Staff veya Student)
+            val currentId = if (isUserStaff) savedStaffId else StudentSession.currentStudentId
+
+            // ViewModel'i dinamik Factory ile oluştur
+            val chatVm: ChatViewModel = viewModel(
+                factory = ChatViewModel.provideFactory(currentId ?: "")
+            )
+
             ChatListScreen(
                 tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
                 currentRoute = currentRoute,
-                isStaff = isUserStaff, // EKSİK PARAMETRE EKLENDİ
+                isStaff = isUserStaff,
                 onTabSelected = navigateToTab,
                 onChatClick = { id, name -> navController.navigate("chatDetail/$id/$name") },
-                onNewChatClick = { /* New chat logic */ }
+                onNewChatClick = { /* Yeni sohbet başlatma mantığı */ },
+                viewModel = chatVm // HATA ÇÖZÜLDÜ: Artık parametre gönderiliyor
             )
         }
-
+// 2. MESAJ DETAY (SOHBET) EKRANI - GÜNCELLENMİŞ ROTA
         composable(
-            route = "chatDetail/{chatId}/{chatName}",
+            route = "chatDetail/{chatId}/{chatName}/{studentId}/{serviceName}",
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("chatName") { type = NavType.StringType }
+                navArgument("chatName") { type = NavType.StringType },
+                navArgument("studentId") { type = NavType.StringType },
+                navArgument("serviceName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId").orEmpty()
             val chatName = backStackEntry.arguments?.getString("chatName").orEmpty()
+            val studentId = backStackEntry.arguments?.getString("studentId").orEmpty()
+            val serviceName = backStackEntry.arguments?.getString("serviceName").orEmpty()
+
+            val currentId = if (isUserStaff) savedStaffId else StudentSession.currentStudentId
+
+            val chatVm: ChatViewModel = viewModel(
+                factory = ChatViewModel.provideFactory(currentId ?: "")
+            )
 
             ChatDetailScreen(
                 tabs = if (isUserStaff) staffBottomTabs else studentBottomTabs,
                 chatId = chatId,
-                chatTitle = chatName,
+                chatTitle = chatName, // Ekranda görünen isim
+                studentId = studentId, // Yeni eklenen
+                serviceName = serviceName, // Yeni eklenen
                 currentRoute = currentRoute,
+                currentUserId = currentId ?: "",
                 onTabSelected = navigateToTab,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                viewModel = chatVm
             )
         }
-
         // --- Appointment List ---
         composable(
             route = "${Screen.Appointments.route}?$ARG_STUDENT_ID={$ARG_STUDENT_ID}",
@@ -525,15 +549,15 @@ fun StudentCenterNavHost(
             )
         }
         // --- Staff Dashboard Bölümü ---
+        // --- Staff Dashboard Bölümü ---
         composable(
             route = "staffDashboard/{staffId}?entry={entry}",
             arguments = listOf(
                 navArgument("staffId") { type = NavType.StringType },
                 navArgument("entry") { type = NavType.StringType; defaultValue = "staff" }
             )
-        ) {backStackEntry ->
+        ) { backStackEntry ->
             val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
-
             val vm: StaffDashboardViewModel = viewModel(
                 factory = StaffDashboardViewModelFactory(staffId, AppDI.staffRepository)
             )
@@ -541,21 +565,25 @@ fun StudentCenterNavHost(
             val state by vm.uiState.collectAsState()
             val staffName by vm.staffName.collectAsState()
             val currentFilter by vm.currentFilter.collectAsState()
-            val actionLoading by vm.actionLoading.collectAsState()
-            val actionError by vm.actionError.collectAsState()
 
             StaffDashboardScreen(
                 state = state,
                 staffName = staffName,
                 selectedFilter = currentFilter,
                 onFilterChanged = { vm.onFilterChanged(it) },
-                actionLoading = actionLoading,
-                actionError = actionError,
-                // Dashboard'dayken ikonun yeşil yanması için rotayı "staff_home" olarak simüle ediyoruz
                 currentRoute = "staff_home",
                 onTabSelected = navigateToTab,
                 onApprove = { vm.approve(it) },
-                onReject = { vm.reject(it) }
+                onReject = { vm.reject(it) },
+
+                // BURAYA EKLEYECEKSİN:
+                onChatClick = { studentUid, studentName, serviceName ->
+                    // Boşlukları temizleyerek güvenli bir ID oluşturuyoruz
+                    val conversationId = "${studentUid}_${serviceName.replace(" ", "")}"
+
+                    // Navigasyon: chatDetail/id/isim/ogrenciId/hizmetAdi
+                    navController.navigate("chatDetail/$conversationId/$studentName/$studentUid/$serviceName")
+                }
             )
         }
 

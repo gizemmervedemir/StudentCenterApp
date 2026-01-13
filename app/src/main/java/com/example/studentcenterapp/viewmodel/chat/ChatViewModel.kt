@@ -5,10 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.chat.ChatRepository
-import com.example.studentcenterapp.data.student.StudentSession
 import com.example.studentcenterapp.model.ChatMessage
 import com.example.studentcenterapp.model.Conversation
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -25,7 +23,6 @@ class ChatViewModel(
     val messages: StateFlow<List<ChatMessage>> = _messages
 
     init {
-        // ViewModel ilk oluştuğunda kullanıcının konuşmalarını dinlemeye başla
         loadConversations()
     }
 
@@ -45,25 +42,34 @@ class ChatViewModel(
         }
     }
 
-    fun sendMessage(conversationId: String, text: String) {
+    // ChatViewModel içindeki sendMessage fonksiyonu
+    fun sendMessage(conversationId: String, text: String, studentId: String, studentName: String, serviceName: String) {
         if (text.isBlank()) return
+
         val newMessage = ChatMessage(
             senderId = currentUserId,
             text = text,
-            timestamp = Timestamp.now()
+            timestamp = com.google.firebase.Timestamp.now()
         )
-        repository.sendMessage(conversationId, newMessage)
+
+        viewModelScope.launch {
+            repository.sendMessage(
+                conversationId = conversationId,
+                message = newMessage,
+                studentId = studentId,
+                studentName = studentName,
+                serviceName = serviceName
+            )
+        }
     }
 
-    // --- FACTORY EKLEMESİ (Crash Çözümü Burası) ---
     companion object {
-        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        fun provideFactory(userId: String): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                // Repository'yi AppDI'dan, UserID'yi StudentSession'dan alıyoruz
                 return ChatViewModel(
                     repository = AppDI.chatRepository,
-                    currentUserId = StudentSession.currentStudentId ?: ""
+                    currentUserId = userId
                 ) as T
             }
         }

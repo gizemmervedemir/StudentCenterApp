@@ -4,13 +4,15 @@ import com.example.studentcenterapp.model.ChatMessage
 import com.example.studentcenterapp.model.Conversation
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 
 class ChatRepository(private val db: FirebaseFirestore) {
 
-    // Konuşma listesini (Chat_Main) dinle
+    // Konuşmaları dinle (Kullanıcının içinde olduğu odalar)
     fun getConversations(userId: String): Flow<List<Conversation>> = callbackFlow {
         val subscription = db.collection("conversations")
             .whereArrayContains("participants", userId)
@@ -22,7 +24,7 @@ class ChatRepository(private val db: FirebaseFirestore) {
         awaitClose { subscription.remove() }
     }
 
-    // Mesaj detaylarını (Chat_Ali) anlık dinle
+    // Mesajları anlık dinle
     fun getMessages(conversationId: String): Flow<List<ChatMessage>> = callbackFlow {
         val subscription = db.collection("conversations")
             .document(conversationId)
@@ -35,19 +37,31 @@ class ChatRepository(private val db: FirebaseFirestore) {
         awaitClose { subscription.remove() }
     }
 
-    // Mesaj Gönder
-    fun sendMessage(conversationId: String, message: ChatMessage) {
-        val batch = db.batch()
-
-        // 1. Mesajı alt koleksiyona ekle
-        val msgRef = db.collection("conversations").document(conversationId)
-            .collection("messages").document()
-        batch.set(msgRef, message)
-
-        // 2. Ana konuşma dokümanındaki "son mesaj" bilgisini güncelle
+    // --- OTOMATİK OLUŞTURMA MANTIĞI BURADA ---
+    suspend fun sendMessage(
+        conversationId: String,
+        message: ChatMessage,
+        studentId: String,
+        studentName: String,
+        serviceName: String
+    ) {
         val convRef = db.collection("conversations").document(conversationId)
-        batch.update(convRef, "lastMessage", message.text, "timestamp", message.timestamp)
 
-        batch.commit()
+        // set(..., SetOptions.merge()) kullanarak doküman yoksa oluşturur, varsa sadece günceller
+        val conversationData = mapOf(
+            "id" to conversationId,
+            "participants" to listOf(studentId, message.senderId), // Öğrenci ve Personel (sender)
+            "studentId" to studentId,
+            "studentName" to studentName,
+            "serviceName" to serviceName,
+            "lastMessage" to message.text,
+            "timestamp" to message.timestamp
+        )
+
+        // 1. Ana dokümanı oluştur/güncelle
+        convRef.set(conversationData, SetOptions.merge()).await()
+
+        // 2. Mesajı alt koleksiyona ekle
+        convRef.collection("messages").add(message).await()
     }
 }

@@ -1,15 +1,11 @@
 package com.example.studentcenterapp.ui.staff
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -26,9 +22,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.studentcenterapp.R
 import com.example.studentcenterapp.model.Appointment
 import com.example.studentcenterapp.ui.common.*
-import com.example.studentcenterapp.ui.common.staffBottomTabs // Merkezi tab listesi
 import com.example.studentcenterapp.ui.state.UiState
-import com.example.studentcenterapp.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -39,12 +33,12 @@ fun StaffDashboardScreen(
     staffName: String,
     selectedFilter: String,
     onFilterChanged: (String) -> Unit,
-    actionLoading: Boolean,
-    actionError: String?,
     currentRoute: String?,
     onTabSelected: (AppTab) -> Unit,
     onApprove: (String) -> Unit,
-    onReject: (String) -> Unit
+    onReject: (String) -> Unit,
+    // GÜNCELLEME: studentUid, studentName ve serviceName artık beraber gidiyor
+    onChatClick: (String, String, String) -> Unit
 ) {
     val selectedDate = remember { mutableStateOf(LocalDate.now()) }
     val showHistoryDialog = remember { mutableStateOf(false) }
@@ -67,7 +61,6 @@ fun StaffDashboardScreen(
                 .padding(padding)
                 .background(Color(0xFF4FC3F7))
         ) {
-            // Logo
             Box(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
@@ -79,7 +72,6 @@ fun StaffDashboardScreen(
                 )
             }
 
-            // Beyaz Gövde
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.White,
@@ -97,7 +89,6 @@ fun StaffDashboardScreen(
                         onSelect = onFilterChanged
                     )
 
-                    // Tarih Seçici
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -116,7 +107,6 @@ fun StaffDashboardScreen(
                         }
                     }
 
-                    // Liste
                     when (state) {
                         is UiState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                         is UiState.Success -> {
@@ -133,6 +123,10 @@ fun StaffDashboardScreen(
                                         onShowHistory = {
                                             selectedApptForHistory.value = appt
                                             showHistoryDialog.value = true
+                                        },
+                                        // GÜNCELLEME: appt.departmentName (serviceName) eklendi
+                                        onChatClick = {
+                                            onChatClick(appt.studentUid, appt.studentName, appt.departmentName)
                                         }
                                     )
                                 }
@@ -153,20 +147,21 @@ fun StaffDashboardScreen(
     }
 }
 
-// --- Alt Bileşenler (UI Components) ---
-
 @Composable
 fun StaffAppointmentCard(
     appointment: Appointment,
     onApprove: () -> Unit,
     onReject: () -> Unit,
-    onShowHistory: () -> Unit
+    onShowHistory: () -> Unit,
+    onChatClick: () -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded },
+        shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F2F2))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -174,23 +169,66 @@ fun StaffAppointmentCard(
                 Icon(Icons.Default.AccountCircle, null, Modifier.size(45.dp), Color.Gray)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = appointment.studentName, fontWeight = FontWeight.Bold)
-                    Text(text = appointment.appointmentDate, fontSize = 12.sp, color = Color.Gray)
+                    Text(text = appointment.studentName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = appointment.startTime, fontSize = 13.sp, color = Color.Gray)
                 }
-                StatusBadge(status = appointment.status)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (appointment.status == "pending") {
+                        IconButton(onClick = onApprove) {
+                            Icon(Icons.Default.CheckCircle, null, tint = Color.Black)
+                        }
+                    }
+                    IconButton(onClick = onReject) {
+                        Icon(Icons.Default.Cancel, null, tint = Color.Black)
+                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = Color.Black
+                    )
+                }
             }
 
-            AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 16.dp)) {
-                    Text("Öğrenci ID: ${appointment.studentId}", fontSize = 13.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        if (appointment.status == "pending") {
-                            IconButton(onClick = onApprove) { Icon(Icons.Default.CheckCircle, null, tint = Color.Green) }
-                            IconButton(onClick = onReject) { Icon(Icons.Default.Cancel, null, tint = Color.Red) }
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    InfoItem(Icons.Default.Business, appointment.departmentName)
+                    InfoItem(Icons.Default.Tag, "Öğrenci No: ${appointment.studentId}")
+
+                    // GÜNCELLEME: Sadece veri varsa "Son Randevu Tarihi" satırı gözükür
+                    if (!appointment.appointmentDate.isNullOrEmpty()) {
+                        InfoItem(Icons.Default.DateRange, "Son Randevu Tarihi: ${appointment.appointmentDate}")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = onShowHistory,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF06292)),
+                            shape = RoundedCornerShape(15.dp),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Text("Randevu Geçmişi", color = Color.White, fontSize = 12.sp)
                         }
-                        Button(onClick = onShowHistory) {
-                            Text("Geçmiş", fontSize = 10.sp)
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        IconButton(
+                            onClick = onChatClick,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(Color(0xFFF06292), CircleShape)
+                        ) {
+                            Icon(Icons.Default.ChatBubble, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -200,14 +238,11 @@ fun StaffAppointmentCard(
 }
 
 @Composable
-fun StatusBadge(status: String) {
-    val color = when(status) {
-        "approved" -> Color(0xFF48C9B0)
-        "pending" -> Color(0xFFFF7043)
-        else -> Color.Gray
-    }
-    Surface(color = color, shape = RoundedCornerShape(8.dp)) {
-        Text(status, color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 10.sp)
+fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Icon(icon, null, modifier = Modifier.size(16.dp), tint = Color.Black)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, fontSize = 13.sp, color = Color.Black)
     }
 }
 
