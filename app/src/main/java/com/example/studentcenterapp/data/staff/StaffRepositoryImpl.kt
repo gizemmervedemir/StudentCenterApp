@@ -8,35 +8,58 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 
 class StaffRepositoryImpl(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()) : StaffRepository {
+    private val firestoreDataSource: FirestoreAppointmentDataSource,
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) : StaffRepository {
 
-    override fun getPendingAppointmentsForStaff(staffId: String) = TODO("Implement")
+    // Departman bazlı randevuları DataSource'dan al
+    override fun getAppointmentsByDepartment(departmentId: String): Flow<List<Appointment>> {
+        return firestoreDataSource.observeAppointmentsByDepartment(departmentId)
+    }
 
-    override suspend fun approveAppointment(appointmentId: String) = TODO("Implement")
+    // Personelin kendisine atananları DataSource'dan al
+    override fun getPendingAppointmentsForStaff(staffId: String): Flow<List<Appointment>> {
+        return firestoreDataSource.observeAppointmentsForStudent(staffId) // Mevcut metodun adını buna göre kullanabilirsin
+    }
 
+    // Onaylama: Hem durumu değiştirir hem staffId atar
+    override suspend fun approveAppointment(appointmentId: String, staffId: String): Result<Unit> {
+        val success = firestoreDataSource.updateAppointmentStatusWithStaff(
+            appointmentId = appointmentId,
+            newStatus = "approved",
+            staffId = staffId
+        )
+        return if (success) Result.success(Unit)
+        else Result.failure(Exception("Onaylama işlemi başarısız oldu."))
+    }
 
-    override suspend fun rejectAppointment(appointmentId: String) = TODO("Implement")
+    // Reddetme
+    override suspend fun rejectAppointment(appointmentId: String): Result<Unit> {
+        val success = firestoreDataSource.updateStatus(appointmentId, "cancelled")
+        return if (success) Result.success(Unit)
+        else Result.failure(Exception("Reddetme işlemi başarısız oldu."))
+    }
 
-
+    // Profil Getirme
     override suspend fun getStaffById(id: String): Staff? {
         return try {
             val doc = firestore.collection("users").document(id).get().await()
             if (!doc.exists()) return null
 
-            // Eğer staff mı öğrenci mi ayıran alanın varsa (ör: role, userType, isStaff)
-            // burada kontrol edebilirsin. Yoksa şimdilik sadece Staff mapleyelim.
             Staff(
                 id = id,
-                name = doc.getString("fullName") ?: "",
-                profilePictureUrl = doc.getString("profilePictureUrl"),
+                name = doc.getString("fullName") ?: doc.getString("name") ?: "",
+                email = doc.getString("email") ?: "", // Artık modelde var, hata vermez
                 role = doc.getString("role") ?: "staff",
-                departmentId = doc.getString("departmentId") ?: ""
+                departmentId = doc.getString("departmentId") ?: "",
+                profilePictureUrl = doc.getString("profilePictureUrl")
             )
         } catch (e: Exception) {
             null
         }
     }
-    // StaffRepositoryImpl içinde TODO olan kısmı güncelle:
+
+    // Profil Güncelleme
     override suspend fun updateStaffProfile(id: String, name: String): Result<Unit> {
         return try {
             firestore.collection("users").document(id)

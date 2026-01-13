@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class StaffDashboardViewModel(
-    private val staffId: String,
+    private val staffId: String, // Firebase UID
     private val repository: StaffRepository
 ) : ViewModel() {
 
@@ -25,8 +25,10 @@ class StaffDashboardViewModel(
     private val _staffName = MutableStateFlow("Personel")
     val staffName: StateFlow<String> = _staffName.asStateFlow()
 
-    // Görseldeki default filtre: Aktif Randevular (approved)
-    private val _currentFilter = MutableStateFlow("approved")
+    private val _departmentId = MutableStateFlow<String?>(null)
+
+    // Başlangıçta bekleyen randevuları (pending) göstermek daha mantıklıdır
+    private val _currentFilter = MutableStateFlow("pending")
     val currentFilter: StateFlow<String> = _currentFilter.asStateFlow()
 
     private val _actionLoading = MutableStateFlow(false)
@@ -36,27 +38,43 @@ class StaffDashboardViewModel(
     val actionError: StateFlow<String?> = _actionError.asStateFlow()
 
     init {
-        fetchStaffName()
-        observeAppointments()
+        loadStaffDataAndResolveDepartment()
     }
 
-    private fun fetchStaffName() {
+    /**
+     * Firestore'dan personelin staffNo bilgisini çeker ve departmanını belirler.
+     */
+    private fun loadStaffDataAndResolveDepartment() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         FirebaseFirestore.getInstance()
             .collection("users")
             .document(currentUserId)
             .get()
             .addOnSuccessListener { doc ->
-                val fullName = doc.getString("fullName") ?: doc.getString("name")
-                if (!fullName.isNullOrBlank()) {
-                    _staffName.value = fullName.split(" ").first()
+
+                val fullName = doc.getString("fullName") ?: "Personel"
+                _staffName.value = fullName.split(" ").first()
+
+
+                val resolvedDeptId = doc.getString("departmentId")
+
+                if (resolvedDeptId != null) {
+                    _departmentId.value = resolvedDeptId
+
+                    observeDepartmentAppointments(resolvedDeptId)
+                } else {
+                    _uiState.value = UiState.Error("Departman bilgisi bulunamadı. Lütfen tekrar kayıt olun.")
                 }
+            }
+            .addOnFailureListener { e ->
+                _uiState.value = UiState.Error("Bağlantı hatası: ${e.message}")
             }
     }
 
-    private fun observeAppointments() {
+    private fun observeDepartmentAppointments(deptId: String) {
         viewModelScope.launch {
-            repository.getPendingAppointmentsForStaff(staffId).collect { list ->
+            repository.getAppointmentsByDepartment(deptId).collect { list ->
                 allAppointments = list
                 applyFilter(_currentFilter.value)
             }
@@ -69,19 +87,37 @@ class StaffDashboardViewModel(
     }
 
     private fun applyFilter(status: String) {
-        val filteredList = if (status == "all") allAppointments else allAppointments.filter { it.status == status }
+        val filteredList = if (status == "all") {
+            allAppointments
+        } else {
+            allAppointments.filter { it.status == status }
+        }
         _uiState.value = UiState.Success(filteredList)
     }
-
-    fun approve(id: String) = updateStatus(id, true)
-    fun reject(id: String) = updateStatus(id, false)
-
-    private fun updateStatus(id: String, isApprove: Boolean) {
+    fun approve(id: String) {
         viewModelScope.launch {
             _actionLoading.value = true
-            val result = if (isApprove) repository.approveAppointment(id) else repository.rejectAppointment(id)
+            // Onaylarken personelin UID'sini (staffId) gönderiyoruz
+            val result = repository.approveAppointment(id, staffId)
             _actionLoading.value = false
-            if (result.isFailure) _actionError.value = result.exceptionOrNull()?.message
+            if (result.isFailure) {
+                _actionError.value = result.exceptionOrNull()?.message
+            }
         }
+    }
+
+    fun reject(id: String) {
+        viewModelScope.launch {
+            _actionLoading.value = true
+            val result = repository.rejectAppointment(id)
+            _actionLoading.value = false
+            if (result.isFailure) {
+                _actionError.value = result.exceptionOrNull()?.message
+            }
+        }
+    }
+
+    fun clearError() {
+        _actionError.value = null
     }
 }

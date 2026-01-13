@@ -11,46 +11,31 @@ class FirestoreAppointmentDataSource {
     private val db = FirebaseFirestore.getInstance()
     private val collection = db.collection("appointments")
 
-    /**
-     * ✅ YENİ: Randevuyu Firestore'a kaydeder.
-     * ViewModel'dan gelen Appointment nesnesini direkt döküman olarak yazar.
-     */
     suspend fun addAppointment(appointment: Appointment): Result<Unit> {
         return try {
-            collection
-                .document(appointment.id) // Kendi ürettiğimiz UUID'yi doküman ID'si yapıyoruz
-                .set(appointment)
-                .await()
+            collection.document(appointment.id).set(appointment).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    /**
-     * Öğrencinin randevularını canlı dinle
-     */
-    fun observeAppointmentsForStudent(studentId: String): Flow<List<Appointment>> = callbackFlow {
+    // Departman bazlı canlı dinleme
+    fun observeAppointmentsByDepartment(departmentId: String): Flow<List<Appointment>> = callbackFlow {
         val listener = collection
-            .whereEqualTo("studentId", studentId)
+            .whereEqualTo("departmentId", departmentId)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-
+                if (error != null) { close(error); return@addSnapshotListener }
                 val items = snapshot?.toObjects(Appointment::class.java) ?: emptyList()
                 trySend(items)
             }
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Personelin randevularını canlı dinle
-     */
-    fun observeAppointmentsForStaff(staffId: String): Flow<List<Appointment>> = callbackFlow {
+    // Parametre ismini studentUid yapıyoruz ki karmaşa olmasın
+    fun observeAppointmentsForStudent(studentUid: String): Flow<List<Appointment>> = callbackFlow {
         val listener = collection
-            .whereEqualTo("staffId", staffId)
+            .whereEqualTo("studentUid", studentUid) // Artık buradaki studentUid yukarıdakiyle eşleşiyor
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -62,14 +47,27 @@ class FirestoreAppointmentDataSource {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Durum güncelleme (Onayla/İptal)
-     */
-    suspend fun updateStatus(appointmentId: String, newStatus: String): Boolean {
+    // Onaylama sırasında staffId işleme
+    suspend fun updateAppointmentStatusWithStaff(
+        appointmentId: String,
+        newStatus: String,
+        staffId: String
+    ): Boolean {
         return try {
             collection.document(appointmentId)
-                .update("status", newStatus)
-                .await()
+                .update(
+                    "status", newStatus,
+                    "staffId", staffId
+                ).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateStatus(appointmentId: String, newStatus: String): Boolean {
+        return try {
+            collection.document(appointmentId).update("status", newStatus).await()
             true
         } catch (e: Exception) {
             false

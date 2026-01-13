@@ -193,10 +193,21 @@ fun StudentCenterNavHost(
             )
         }
 
-        composable(Screen.SignupSuccess.route) {
+        composable(
+            route = "signupSuccess/{userType}", // "signupSuccess/staff" veya "signupSuccess/student" buraya düşer
+            arguments = listOf(navArgument("userType") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userType = backStackEntry.arguments?.getString("userType") ?: "student"
+
             SignupSuccessScreen(onLoginClick = {
-                navController.navigate(Screen.StudentLogin.route) {
-                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                if (userType == "staff") {
+                    navController.navigate(Screen.StaffLogin.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                } else {
+                    navController.navigate(Screen.StudentLogin.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
                 }
             })
         }
@@ -268,16 +279,18 @@ fun StudentCenterNavHost(
 
 // 1. Ana Profil Ekranı
         composable(Screen.StudentProfile.route) {
-            println("DEBUG: Profil ekranına girilmeye çalışılıyor!")
             val profileVm: ProfileViewModel = viewModel(
                 factory = ProfileViewModelFactory(AppDI.studentRepository, AppDI.staffRepository)
             )
 
-            // isUserStaff değişkenini burada kullanıyoruz
-            val userId = if (isUserStaff) staffIdFromArgs ?: "" else StudentSession.currentStudentId
+            // userId'yi null-safe hale getirdik (?: "")
+            val userId = (if (isUserStaff) staffIdFromArgs else StudentSession.currentStudentId) ?: ""
 
+            // Artık userId String? değil, kesinlikle String olduğu için hata vermeyecektir
             LaunchedEffect(userId) {
-                profileVm.loadProfile(userId, isUserStaff)
+                if (userId.isNotEmpty()) {
+                    profileVm.loadProfile(userId, isUserStaff)
+                }
             }
 
             when (val state = profileVm.uiState) {

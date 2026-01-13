@@ -73,13 +73,9 @@ class TimeSlotCalendarViewModel(
         _uiState.update { it.copy(selectedSlotId = slotId) }
     }
 
-    /**
-     * Appointment modelindeki (id, studentId, staffId, serviceId, timeSlotId, status)
-     * zorunlu alanlarını doldurarak Firebase'e kaydeder.
-     */
     fun confirmSelectedSlot(
         serviceName: String,
-        type: String, // "office" veya "online"
+        type: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -87,8 +83,8 @@ class TimeSlotCalendarViewModel(
         val selectedId = uiVal.selectedSlotId
         val selectedSlot = uiVal.groupedSlots.values.flatten().find { it.id == selectedId }
 
-        val studentId = StudentSession.currentStudentId ?: "20230000000"
-        val studentName = "Öğrenci"
+        val studentId = StudentSession.currentStudentId ?: ""
+        val studentName = StudentSession.currentStudentName ?: "Bilinmeyen Öğrenci"
 
         if (selectedId == null || selectedSlot == null) {
             onError("Lütfen bir saat dilimi seçin")
@@ -101,13 +97,18 @@ class TimeSlotCalendarViewModel(
             val isLocalSuccess = repository.reserveSlot(selectedId)
 
             if (isLocalSuccess) {
+                // serviceId "101" ise departmentId "1" olur.
+                val resolvedDeptId = if (serviceId.length >= 1) serviceId.take(1) else "1"
+
                 val newAppointment = Appointment(
                     id = UUID.randomUUID().toString(),
-                    studentId = studentId,
-                    studentName = studentName,
+                    studentUid = StudentSession.currentStudentId ?: "",
+                    studentId = StudentSession.studentNumber ?: "No Alınamadı",
+                    studentName = StudentSession.currentStudentName ?: "Öğrenci",
                     staffId = "not_assigned",
                     serviceName = serviceName,
                     serviceId = serviceId,
+                    departmentId = serviceId.take(1), // Artık Firestore'da personel görebilecek!
                     timeSlotId = selectedId,
                     appointmentDate = selectedSlot.date,
                     type = type,
@@ -117,8 +118,6 @@ class TimeSlotCalendarViewModel(
                 )
 
                 try {
-                    // ✅ HATALI SATIR DÜZELTİLDİ: upsertAppointment -> createAppointment
-                    // Repository interface'inde verdiğimiz ismi burada çağırmalıyız
                     val result = AppDI.appointmentRepository.createAppointment(newAppointment)
 
                     if (result.isSuccess) {

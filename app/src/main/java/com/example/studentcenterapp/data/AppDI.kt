@@ -21,14 +21,11 @@ object AppDI {
     private val departmentDataSource: DepartmentDataSource by lazy { FirestoreDepartmentDataSource() }
     private val serviceDataSource: ServiceDataSource by lazy { FirestoreServiceDataSource() }
 
-    // Randevular için tek bir Firestore veri kaynağı
+    // Randevular için tek bir Firestore veri kaynağı (Singleton)
     private val appointmentFirestoreDataSource: FirestoreAppointmentDataSource by lazy {
         FirestoreAppointmentDataSource()
     }
 
-
-
-    // --- 2. Repositories (Depolar) ---
     // --- 2. Depolar (Repositories) ---
 
     val departmentRepository: DepartmentRepository by lazy {
@@ -40,7 +37,7 @@ object AppDI {
     }
 
     val studentRepository: StudentRepository by lazy {
-        StudentRepositoryImpl(FirebaseFirestore.getInstance())
+        StudentRepositoryImpl(firestore)
     }
 
     // ✅ Firebase Randevu İşlemleri
@@ -48,8 +45,13 @@ object AppDI {
         AppointmentRepositoryImpl(appointmentFirestoreDataSource)
     }
 
+    // ✅ HATA DÜZELTİLDİ:
+    // StaffRepositoryImpl artık hem DataSource'u hem Firestore instance'ını alıyor.
     val staffRepository: StaffRepository by lazy {
-        StaffRepositoryImpl(FirebaseFirestore.getInstance())
+        StaffRepositoryImpl(
+            firestoreDataSource = appointmentFirestoreDataSource,
+            firestore = firestore
+        )
     }
 
     val chatRepository: ChatRepository by lazy {

@@ -9,7 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.studentcenterapp.data.AppDI
 import com.example.studentcenterapp.data.student.StudentRepository
 import com.example.studentcenterapp.data.student.StudentSession
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class StudentLoginViewModel(private val repository: StudentRepository) : ViewModel() {
     var email by mutableStateOf("")
@@ -28,20 +30,37 @@ class StudentLoginViewModel(private val repository: StudentRepository) : ViewMod
             isLoading = true
             val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
 
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener { authResult ->
+            try {
+                // 1. Firebase Auth ile giriş yap
+                val authResult = auth.signInWithEmailAndPassword(email, password).await()
+                val userId = authResult.user?.uid ?: ""
+
+                // 2. Firestore'dan kullanıcının gerçek bilgilerini çek
+                val userDoc = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(userId)
+                    .get()
+                    .await()
+
+                if (userDoc.exists()) {
+                    StudentSession.currentStudentId = userId
+                    StudentSession.studentNumber = userDoc.getString("schoolNumber") ?: "Bilinmiyor"
+                    StudentSession.currentStudentName = userDoc.getString("fullName") ?: "İsimsiz Öğrenci"
+
                     isLoading = false
-                    // Firebase'in verdiği benzersiz User ID'yi (UID) session'a kaydediyoruz
-                    val userId = authResult.user?.uid ?: ""
-                    com.example.studentcenterapp.data.student.StudentSession.currentStudentId = userId
                     onSuccess()
-                }
-                .addOnFailureListener { e ->
+                } else {
                     isLoading = false
-                    errorMessage = "Giriş başarısız: E-posta veya şifre hatalı."
+                    errorMessage = "Kullanıcı profili bulunamadı."
                 }
+
+            } catch (e: Exception) {
+                isLoading = false
+                errorMessage = "Giriş başarısız: E-posta veya şifre hatalı."
+            }
         }
     }
+
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
