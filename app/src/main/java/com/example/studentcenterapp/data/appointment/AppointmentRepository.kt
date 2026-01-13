@@ -13,7 +13,8 @@ interface AppointmentRepository {
     // ID'ye göre tek bir randevu getirir
     fun getAppointmentById(appointmentId: String): Flow<Appointment?>
 
-    // ✅ Güncellendi: Artık direkt Appointment nesnesini alır
+    fun observeApprovedAppointments(staffId: String): Flow<List<Appointment>>
+    suspend fun updateAppointmentStatus(appointmentId: String, newStatus: String)
     suspend fun createAppointment(appointment: Appointment): Result<Unit>
 
     // Randevuyu iptal eder

@@ -11,6 +11,9 @@ class FirestoreAppointmentDataSource {
     private val db = FirebaseFirestore.getInstance()
     private val collection = db.collection("appointments")
 
+    /**
+     * Yeni randevu oluşturma
+     */
     suspend fun addAppointment(appointment: Appointment): Result<Unit> {
         return try {
             collection.document(appointment.id).set(appointment).await()
@@ -20,7 +23,9 @@ class FirestoreAppointmentDataSource {
         }
     }
 
-    // Departman bazlı canlı dinleme
+    /**
+     * Departman bazlı canlı dinleme (Dashboard için)
+     */
     fun observeAppointmentsByDepartment(departmentId: String): Flow<List<Appointment>> = callbackFlow {
         val listener = collection
             .whereEqualTo("departmentId", departmentId)
@@ -32,22 +37,53 @@ class FirestoreAppointmentDataSource {
         awaitClose { listener.remove() }
     }
 
-    // Parametre ismini studentUid yapıyoruz ki karmaşa olmasın
+    /**
+     * Öğrenci bazlı canlı dinleme
+     */
     fun observeAppointmentsForStudent(studentUid: String): Flow<List<Appointment>> = callbackFlow {
         val listener = collection
-            .whereEqualTo("studentUid", studentUid) // Artık buradaki studentUid yukarıdakiyle eşleşiyor
+            .whereEqualTo("studentUid", studentUid)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
+                if (error != null) { close(error); return@addSnapshotListener }
                 val items = snapshot?.toObjects(Appointment::class.java) ?: emptyList()
                 trySend(items)
             }
         awaitClose { listener.remove() }
     }
 
-    // Onaylama sırasında staffId işleme
+    /**
+     * Personelin takviminde görünecek randevuları dinleme.
+     * Burada 'approved' filtresini kaldırdım çünkü personel hem bekleyenleri
+     * hem de onayladıklarını takvimde görebilmeli (senin istediğin UI mantığına göre).
+     */
+    // FirestoreAppointmentDataSource.kt
+    fun observeApprovedAppointments(staffId: String): Flow<List<Appointment>> = callbackFlow {
+        val listener = collection
+            .whereEqualTo("staffId", staffId)
+            // .whereEqualTo("status", "approved")  <-- BU SATIRI SİLDİK/YORUMA ALDIK
+            // Böylece hem 'pending' hem 'approved' olanlar akışa (flow) dahil olur.
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) { close(error); return@addSnapshotListener }
+                val items = snapshot?.toObjects(Appointment::class.java) ?: emptyList()
+                trySend(items)
+            }
+        awaitClose { listener.remove() }
+    }
+    /**
+     * Temel Durum Güncelleme
+     */
+    suspend fun updateStatus(appointmentId: String, newStatus: String): Boolean {
+        return try {
+            collection.document(appointmentId).update("status", newStatus).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Personel işlemi (Approve/Reject) yaparken staffId'yi de güncelleyen metod
+     */
     suspend fun updateAppointmentStatusWithStaff(
         appointmentId: String,
         newStatus: String,
@@ -59,15 +95,6 @@ class FirestoreAppointmentDataSource {
                     "status", newStatus,
                     "staffId", staffId
                 ).await()
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    suspend fun updateStatus(appointmentId: String, newStatus: String): Boolean {
-        return try {
-            collection.document(appointmentId).update("status", newStatus).await()
             true
         } catch (e: Exception) {
             false

@@ -31,11 +31,10 @@ class AppointmentRepositoryImpl(
         }
     }
 
-    /**
-     * ✅ GÜNCELLENDİ: Artık tek tek parametre değil, hazır Appointment nesnesini alır.
-     * Bu sayede ViewModel'da hazırlanan serviceName, type, startTime gibi tüm
-     * detaylar kaybolmadan Firestore'a yazılır.
-     */
+    override fun observeApprovedAppointments(staffId: String): Flow<List<Appointment>> {
+        return firestoreDataSource.observeApprovedAppointments(staffId)
+    }
+
     override suspend fun createAppointment(appointment: Appointment): Result<Unit> {
         return try {
             // DataSource içindeki addAppointment metodunu çağırıyoruz
@@ -45,9 +44,11 @@ class AppointmentRepositoryImpl(
         }
     }
 
-    /**
-     * Randevuyu iptal eder (Status güncellemesi yapar).
-     */
+    override suspend fun updateAppointmentStatus(appointmentId: String, newStatus: String) {
+        // DataSource içindeki mevcut updateStatus fonksiyonunu kullanıyoruz
+        firestoreDataSource.updateStatus(appointmentId, newStatus)
+    }
+
     override suspend fun cancelAppointment(id: String): Result<Unit> {
         val success = firestoreDataSource.updateStatus(id, "cancelled")
         return if (success) {

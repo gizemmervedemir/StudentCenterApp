@@ -42,6 +42,8 @@ import com.example.studentcenterapp.ui.profile.UpdateSuccessScreen
 import com.example.studentcenterapp.viewmodel.profile.ProfileUiState
 import com.example.studentcenterapp.viewmodel.profile.ProfileViewModel
 import com.example.studentcenterapp.viewmodel.profile.ProfileViewModelFactory
+import com.example.studentcenterapp.viewmodel.staff.StaffCalendarViewModel
+import com.example.studentcenterapp.viewmodel.staff.StaffCalendarViewModelFactory
 
 private const val ARG_STUDENT_ID = "studentId"
 
@@ -96,6 +98,10 @@ fun StudentCenterNavHost(
             // DURUM 2: Kullanıcı Öğrenci ve "Home" ikonuna basıyor (zaten tab.route departments olacaktır)
             !isUserStaff && tab.route == Screen.Departments.route -> {
                 Screen.Departments.route
+            }
+
+            isUserStaff && tab.route == Screen.StudentCalendar.route -> {
+                "staffCalendar/$savedStaffId"
             }
 
             // DİĞER DURUMLAR: Chat, Profile, Calendar vb.
@@ -381,6 +387,30 @@ fun StudentCenterNavHost(
                 },
                 onBackClick = { navController.popBackStack() },
                 onRetry = { vm.loadServices(departmentId) }
+            )
+        }
+
+        composable("staffCalendar/{staffId}") { backStackEntry ->
+            val staffId = backStackEntry.arguments?.getString("staffId").orEmpty()
+
+            val calendarVm: StaffCalendarViewModel = viewModel(
+                factory = StaffCalendarViewModelFactory(
+                    staffId = staffId,
+                    repository = AppDI.appointmentRepository
+                )
+            )
+
+            StaffCalendarScreen(
+                viewModel = calendarVm,
+                currentRoute = navController.currentBackStackEntry?.destination?.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                },
+                onApprove = { app -> calendarVm.approveAppointment(app) },
+                onReject = { app -> calendarVm.rejectAppointment(app) }
             )
         }
 
